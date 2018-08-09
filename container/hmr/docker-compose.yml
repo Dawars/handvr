@@ -1,0 +1,11 @@
+
+version: '3'
+services:
+  hmr:
+    image: dawars/hmr:gpu
+    volumes:
+     - "/home/dawars/projects:/projects"
+     - "/home/dawars/datasets:/datasets"
+
+    environment:
+     - "DISPLAY=$DISPLAY"

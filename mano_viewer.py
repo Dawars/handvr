@@ -1,3 +1,8 @@
+"""
+Saves posed hand models (.obj) based on the supplied poses (potentially originating from the scan registrations)
+
+"""
+
 import pickle
 
 import numpy as np
@@ -21,7 +26,13 @@ with tf.Session() as sess:
     hands_poses = tf.matmul(hands_components, hands_coeffs)
 
     # cam = N x 3, pose N x self.num_theta, shape: N x 10
-    cams = tf.tile(tf.zeros([1, 3], dtype=tf.float32), [1554, 1])
+    rot = tf.Variable([[0,3.14/2,0]],expected_shape=[1,3])
+    print(sess.run(tf.rank(rot)))
+    cams = tf.tile(rot, [1554, 1])
+
+    sess.run(tf.global_variables_initializer())
+    print(sess.run(cams))
+
     poses = tf.Variable(tf.concat([cams, mano_data['hands_mean'] + hands_poses], axis=1))
     shapes = tf.Variable(tf.zeros([batch_size, 10]))
 

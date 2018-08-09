@@ -1,0 +1,34 @@
+
+version: '3'
+services:
+  dl:
+    image: dawars/dl-py3:gpu
+    volumes:
+     - "/home/dawars/projects:/projects"
+     - "/home/dawars/datasets:/datasets"
+     - "/cache:/cache"
+    environment:
+     - DISPLAY
+    user: ${CURRENT_UID}
+  tensorboard:
+    image: dawars/dl-py3:gpu
+    volumes:
+     - "/home/dawars/projects:/projects"
+     - "/home/dawars/datasets:/datasets"
+     - "/cache:/cache"
+    ports:
+     - "6006:6006"
+    command: /bin/bash # tensorboard --logdir=/logdir
+    working_dir: /projects
+
+  jupyter:
+    image: dawars/dl-py3:gpu
+    volumes:
+     - "/home/dawars/projects:/projects"
+     - "/home/dawars/datasets:/datasets"
+     - "/cache:/cache"
+    ports:
+     - "8888:8888"
+     - "8889:8889"
+    working_dir: /projects
+    command: jupyter notebook --ip=0.0.0.0 --no-browser --allow-root

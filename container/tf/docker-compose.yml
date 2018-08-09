@@ -1,0 +1,7 @@
+
+version: '3'
+services:
+  openpose:
+    image: tensorflow/tensorflow:latest-gpu-py3
+    volumes:
+     - "/Users/dawars/projects:/projects"
