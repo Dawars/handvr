@@ -9,7 +9,7 @@ services:
      - "/cache:/cache"
     environment:
      - DISPLAY
-    user: ${CURRENT_UID}
+#     - PYTHONPATH=/projecjts/handvr
   tensorboard:
     image: dawars/dl-py3:gpu
     volumes:
