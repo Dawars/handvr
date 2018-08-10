@@ -1,6 +1,6 @@
 FROM tensorflow/tensorflow:1.9.0-gpu-py3
 
-RUN apt update && apt install -y libopencv-dev python-opencv unzip curl
+RUN apt update && apt install -y libopencv-dev python-opencv python3-tk
 
 RUN pip3 install --upgrade pip && \
     pip3 install scipy numpy matplotlib scikit-image opencv-python lucid>=0.2.3 \
@@ -11,3 +11,5 @@ RUN pip3 install meshrender \
 
 WORKDIR /projects
 #ENV PYTHONPATH=$PYTHONPATH:/projects:/projects/handvr
+ENV DISPLAY :0
+
