@@ -1,20 +1,19 @@
 """
-In this notebook I will compare different non-linear Auto Encoder based methods to reduce the dimensionality of the hand
- pose space to 2D
- This is desirable for easy exploration of the shape space. This enables rendering a manifold of the space
-    - Fully Connected AE
-    - Convolutional AE
-    - Fully Connected VAE
-    - Convolutional VAE
+The input function for the Estimator
 """
 
 import pickle
 
 import numpy as np
 import tensorflow as tf
-from tf_smpl.batch_smpl import SMPL
 
-print(tf.__version__)
+# tf.flags.DEFINE_float("dropout", 0.8, "Dropout after the bottleneck layer")
+# tf.flags.DEFINE_float("learning_rate", 0.005, "Learning rate")
+# tf.flags.DEFINE_integer("batch_size", 32, "Batch size")
+#
+# tf.flags.DEFINE_string("logdir", './model_files/', "Batch size")
+
+FLAGS = tf.flags.FLAGS
 
 
 def get_poses():
@@ -22,27 +21,40 @@ def get_poses():
     Return a Tensor containing the poses
     (1554, 45) - 3*15 = 45 joint anles for 1554 people
     """
-    with open('mpi/data/mano/MANO_RIGHT_py3.pkl', 'rb') as f:
+    with open('../mpi/data/mano/MANO_RIGHT_py3.pkl', 'rb') as f:
         mano_data = pickle.load(f, encoding='latin1')
 
     batch_size = mano_data['hands_coeffs'].shape[0]
 
-    hands_components = tf.Variable(mano_data['hands_coeffs'], dtype=tf.float32)
-    hands_coeffs = tf.Variable(mano_data['hands_components'], dtype=tf.float32)
+    hands_components = mano_data['hands_coeffs']
+    hands_coeffs = mano_data['hands_components']
 
     # 3*15 = 45 joint angles
-    hands_poses = tf.matmul(hands_components, hands_coeffs)
+    hands_poses = np.matmul(hands_components, hands_coeffs)
 
+    print(FLAGS.batch_size)
     return hands_poses
 
 
-def main():
+def pose_input_fn():
+    train_input_fn = tf.estimator.inputs.numpy_input_fn(
+        x=get_poses(),
+        batch_size=FLAGS.batch_size,
+        num_epochs=None,
+        shuffle=True,
+        queue_capacity=1554,
+        num_threads=1,
+    )
+    return train_input_fn
+
+
+def main(argv):
     with tf.Session() as sess:
         poses = get_poses()
-
-        sess.run(tf.global_variables_initializer())
-        print(poses.eval().shape)
+        print(poses.shape)
+        print(poses.max())
+        print(poses.min())
 
 
 if __name__ == '__main__':
-    main()
+    tf.app.run(main)

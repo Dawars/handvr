@@ -1,34 +1,75 @@
 import tensorflow as tf
+from tensorflow.contrib import slim
 
+#
+# class AutoEncoder(tf.estimator.Estimator):
+#     """An Autoencoder estimator with fully connected layers.
+#     Parameters
+#     ----------
+#     hidden_units : list of int
+#         Number of units in each hidden layer.
+#     activation_fn : callable|None
+#         Activation function to use.
+#     dropout : float|None
+#          Percentage of nodes to remain activate in each layer,
+#          or `None` to disable dropout.
+#     weight_decay : float|None
+#         Amount of regularization to use on the weights
+#         (excludes biases).
+#     learning_rate : float
+#         Learning rate.
+#     model_dir : str
+#         Directory where outputs (checkpoints, event files, etc.)
+#         are written to.
+#     config : RunConfig
+#         Information about the execution environment.
+#     """
 
-def AutoEncoder(features, labels, mode):
-    """
-    Fully connected autoencoder
-    :return:
-    """
-    # todo https://www.tensorflow.org/tutorials/estimators/cnn
+def deep_ae_model_fn(features, labels, mode):
+        # Define model's architecture
+        net = features
+        net = fc_encoder(net, hidden_units)
 
-    # batch size??
-    input_layer = tf.reshape(features["x"], [-1, 48])
+def fc_encoder(inputs, hidden_units, dropout, scope=None):
+    net = inputs
+    with tf.variable_scope(scope, 'encoder', [inputs]):
+        tf.assert_rank(inputs, 2)
+        for layer_id, num_hidden_units in enumerate(hidden_units):
+            with tf.variable_scope(
+                    'layer_{}'.format(layer_id),
+                    values=(net,)) as layer_scope:
+                net = tf.contrib.layers.fully_connected(
+                    net,
+                    num_outputs=num_hidden_units,
+                    scope=layer_scope)
+                if dropout is not None:
+                    net = slim.dropout(net)
+                self.add_hidden_layer_summary(net)
+        net = tf.identity(net, name='output')
 
-    encode1 = tf.layers.dense(input_layer, units=24, activation=tf.nn.relu)
-    en_dropout1 = tf.layers.dropout(encode1, rate=0.5, training=mode == tf.estimator.ModeKeys.TRAIN)
+    return net
 
-    encode2 = tf.layers.dense(en_dropout1, units=12, activation=tf.nn.relu)
-    en_dropout2 = tf.layers.dropout(encode2, rate=0.5, training=mode == tf.estimator.ModeKeys.TRAIN)
+def fc_decoder(inputs, hidden_units, dropout, scope=None):
+    net = inputs
+    with tf.variable_scope(scope, 'decoder', [inputs]):
+        for layer_id, num_hidden_units in enumerate(hidden_units[:-1]):
+            with tf.variable_scope(
+                    'layer_{}'.format(layer_id),
+                    values=(net,)) as layer_scope:
+                net = tf.contrib.layers.fully_connected(
+                    net,
+                    num_outputs=num_hidden_units,
+                    scope=layer_scope)
+                if dropout is not None:
+                    net = slim.dropout(net, scope=layer_scope)
+                self.add_hidden_layer_summary(net)
 
-    encode3 = tf.layers.dense(en_dropout2, units=2, activation=tf.nn.relu)
-    en_dropout3 = tf.layers.dropout(encode3, rate=0.5, training=mode == tf.estimator.ModeKeys.TRAIN)
-
-    embedding = en_dropout3
-
-    decoder1 = tf.layers.dense(embedding, units=12, activation=tf.nn.relu)
-    de_dropout1 = tf.layers.dropout(decoder1, rate=0.5, training=mode == tf.estimator.ModeKeys.TRAIN)
-
-    decoder2 = tf.layers.dense(de_dropout1, units=24, activation=tf.nn.relu)
-    de_dropout2 = tf.layers.dropout(decoder2, rate=0.5, training=mode == tf.estimator.ModeKeys.TRAIN)
-
-    decoder3 = tf.layers.dense(de_dropout2, units=48, activation=tf.nn.relu)
-    de_dropout3 = tf.layers.dropout(decoder3, rate=0.5, training=mode == tf.estimator.ModeKeys.TRAIN)
-
-    output_layer = de_dropout3  # todo needs to be separated / reimplemented in tf.js
+        with tf.variable_scope(
+                'layer_{}'.format(len(hidden_units) - 1),
+                values=(net,)) as layer_scope:
+            net = tf.contrib.layers.fully_connected(net, hidden_units[-1],
+                                                    activation_fn=None,
+                                                    scope=layer_scope)
+            tf.summary.histogram('activation', net)
+        net = tf.identity(net, name='output')
+    return net

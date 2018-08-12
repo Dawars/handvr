@@ -7,9 +7,10 @@ services:
      - "/home/dawars/projects:/projects"
      - "/home/dawars/datasets:/datasets"
      - "/cache:/cache"
+     - "/tmp/.docker.xauth:/tmp/.docker.xauth"
     environment:
-     - DISPLAY
-#     - PYTHONPATH=/projecjts/handvr
+     - "DISPLAY=172.17.0.1:10.0"
+     - "XAUTHORITY=/tmp/.docker.xauth"
   tensorboard:
     image: dawars/dl-py3:gpu
     volumes:
