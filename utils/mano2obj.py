@@ -15,7 +15,6 @@ with open('mpi/data/mano/MANO_RIGHT_py3.pkl', 'rb') as f:
 
 mano = SMPL('/projects/handvr/mpi/data/mano/mano_params.pkl')
 
-
 def manoToOBJ(shapes, poses, filename):
     vertices = mano(shapes, poses, get_skin=True)
     model = vertices[0]
@@ -26,4 +25,3 @@ def manoToOBJ(shapes, poses, filename):
 
         for f in mano_data['f'] + 1:  # Faces are 1-based, not 0-based in obj files
             fp.write('f %d %d %d\n' % (f[0], f[1], f[2]))
-
