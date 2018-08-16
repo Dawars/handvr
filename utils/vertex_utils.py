@@ -15,9 +15,14 @@ with open('mpi/data/mano/MANO_RIGHT_py3.pkl', 'rb') as f:
 
 mano = SMPL('/projects/handvr/mpi/data/mano/mano_params.pkl')
 
-def manoToOBJ(shapes, poses, filename):
-    vertices = mano(shapes, poses, get_skin=True)
-    model = vertices[0]
+
+def getManoVertices(shape, pose):
+    vertices = mano(shape, pose, get_skin=True)
+    return vertices[0]
+
+
+def manoToOBJ(shape, pose, filename):
+    model = getManoVertices(shape, pose)
 
     with open(filename, 'w') as fp:
         for v in model * 10.:
