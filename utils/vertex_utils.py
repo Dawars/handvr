@@ -2,6 +2,7 @@ import json
 import tensorflow as tf
 from tf_smpl.batch_smpl import SMPL
 import pickle
+import numpy as np
 
 
 #with open('/datasets/handvr/mano/hands_components.json') as f:
@@ -13,11 +14,11 @@ import pickle
 with open('mpi/data/mano/MANO_RIGHT_py3.pkl', 'rb') as f:
     mano_data = pickle.load(f, encoding='latin1')
 
-mano = SMPL('/projects/handvr/mpi/data/mano/mano_params.pkl')
+mano = SMPL(mano_data)
 
 
 def get_mano_vertices(shape, pose):
-    vertices = mano(shape, pose, get_skin=True)
+    vertices = mano(tf.Variable(shape), tf.Variable(pose), get_skin=True)
     return vertices[0]
 
 

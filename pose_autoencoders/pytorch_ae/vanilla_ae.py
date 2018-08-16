@@ -16,7 +16,7 @@ batch_size = 64
 learning_rate = 1e-3
 torch.manual_seed(7)
 
-dataset = get_poses('../../mpi/data/mano/MANO_RIGHT_py3.pkl')
+dataset = get_poses('mpi/data/mano/MANO_RIGHT_py3.pkl')
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 poses = torch.Tensor(dataset).float().cuda()
 
@@ -48,32 +48,33 @@ class autoencoder(nn.Module):
         return x
 
 
-model = autoencoder().cuda()
-criterion = nn.MSELoss()
-optimizer = torch.optim.Adam(
-    model.parameters(), lr=learning_rate, weight_decay=1e-5)
+def train():
+    model = autoencoder().cuda()
+    criterion = nn.MSELoss()
+    optimizer = torch.optim.Adam(
+        model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
-for epoch in range(num_epochs):
-    for data in dataloader:
+    for epoch in range(num_epochs):
+        for data in dataloader:
 
-        img = data.float()
-        # img = img.view(img.size(0), -1)
-        img = Variable(img).cuda()
+            img = data.float()
+            # img = img.view(img.size(0), -1)
+            img = Variable(img).cuda()
 
-        # plot
-        if epoch % 10 == 0:
-            latent = model.encoder(poses)
-            plot_latent(latent.cpu().data.numpy(), epoch)
+            # plot
+            if epoch % 10 == 0:
+                latent = model.encoder(poses)
+                plot_latent(latent.cpu().data.numpy(), epoch)
 
-        # ===================forward=====================
-        output = model(img)
-        loss = criterion(output, img)
-        # ===================backward====================
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-    # ===================log========================
-    print('epoch [{}/{}], reconstruction loss:{:.4f}'
-          .format(epoch + 1, num_epochs, loss.item()))
+            # ===================forward=====================
+            output = model(img)
+            loss = criterion(output, img)
+            # ===================backward====================
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+        # ===================log========================
+        print('epoch [{}/{}], reconstruction loss:{:.4f}'
+              .format(epoch + 1, num_epochs, loss.item()))
 
-torch.save(model.state_dict(), './sim_autoencoder.pth')
+    torch.save(model.state_dict(), './sim_autoencoder.pth')

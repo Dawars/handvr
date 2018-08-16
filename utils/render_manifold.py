@@ -17,7 +17,7 @@ from PIL import Image
 
 # Load a premade autoencoder
 ae = autoencoder()
-ae.load_state_dict(torch.load('../pose_autoencoders/pytorch_ae/sim_autoencoder.pth'))
+ae.load_state_dict(torch.load('pose_autoencoders/pytorch_ae/sim_autoencoder.pth'))
 
 # Settings
 
@@ -42,9 +42,9 @@ def render_manifold():
     for x in range(grid_x_min, grid_x_max, step_x):
         for y in range(grid_y_min, grid_y_max, step_y):
             print("Rendering at {x}, {y}".format(x=x, y=y))
-            encoded = torch.tensor([x, y])
-            decoded = ae.decoder(encoded)
-            vertices = get_mano_vertices()
+            encoded = torch.tensor([x, y], dtype=torch.float)
+            decoded_pose = ae.decoder(encoded)
+            vertices = get_mano_vertices(shape, decoded_pose)
             mesh = trimesh.Trimesh(vertices=vertices, faces=get_mano_faces())
 
             #img = Image.frombytes("RGB", size=(image_w, image_h), data=render_mano(mesh))
