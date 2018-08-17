@@ -15,19 +15,17 @@ from meshrender import Scene, MaterialProperties, AmbientLight, PointLight, Scen
 from pose_autoencoders.vanilla_ae import autoencoder
 from utils.mano_utils import *
 
-# Load a premade autoencoder
-ae = autoencoder()
-ae.load_state_dict(torch.load('../pose_autoencoders/sim_autoencoder.pth'))
 
-
-def render_manifold(name="./manifold.png", bounds=(-4, 4), steps=0.5, image_size=200, verbose=False):
+def render_manifold(decoder, name="./manifold.png", bounds=(-4, 4), steps=0.5, image_size=200, verbose=False):
     """
     Render a 2D posed hand manifold
+    :param decoder: pytorch decoder function 2 -> 45 params
     :param name: filename
     :param bounds: bounds of the sampling along the x and y axis
     :param steps: step size for sampling between the bounds
     :param image_size: side length of a single hand in the manifold
     :param verbose: print progress
+    :returns rendered image
     """
     # Settings
     supersampling = 2.5  # don't change
@@ -45,7 +43,8 @@ def render_manifold(name="./manifold.png", bounds=(-4, 4), steps=0.5, image_size
     rot = np.zeros([batch_size, 3])
     shape = np.zeros([batch_size, 10])
 
-    decoded_poses = ae.decoder(encoded).cpu().data.numpy()
+    decoded_poses = decoder(encoded).cpu().data.numpy()
+
     decoded_poses = np.concatenate((rot, decoded_poses), axis=1)
     vertices = get_mano_vertices(shape, decoded_poses)
 
@@ -71,6 +70,7 @@ def render_manifold(name="./manifold.png", bounds=(-4, 4), steps=0.5, image_size
     if verbose:
         print("Images rendered")
     res.save(name)
+    return res
 
 
 def render_mano(mesh, image_size):
@@ -131,8 +131,8 @@ def render_mano(mesh, image_size):
         frame='camera',
         fx=525.0,
         fy=525.0,
-        cx=319.5,
-        cy=239.5,
+        cx=250,
+        cy=250,
         skew=0.0,
         height=image_size,
         width=image_size
@@ -168,4 +168,7 @@ if __name__ == '__main__':
     plt.imsave('rendering_test.png', img[0])
 
     # rendering manifold
-    # render_manifold()
+    ae = autoencoder()  # Load a premade autoencoder
+    ae.load_state_dict(torch.load('../pose_autoencoders/sim_autoencoder.pth'))
+
+    render_manifold(ae.decoder, 'manifold_test.png', verbose=True)
