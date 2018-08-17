@@ -10,16 +10,21 @@ import numpy as np
 #with open('/datasets/handvr/mano/hands_coeffs.json') as f:
 #    hands_coeffs = json.load(f)
 
+sess = tf.Session()
 
 with open('mpi/data/mano/MANO_RIGHT_py3.pkl', 'rb') as f:
     mano_data = pickle.load(f, encoding='latin1')
 
 mano = SMPL(mano_data)
 
+hands_components = tf.Variable(mano_data['hands_components'], dtype=tf.float32)
+hands_coeffs = tf.Variable(mano_data['hands_coeffs'], dtype=tf.float32)
+
 
 def get_mano_vertices(shape, pose):
-    vertices = mano(tf.Variable(shape), tf.Variable(pose), get_skin=True)
-    return vertices[0]
+    vertices = mano(tf.Variable(shape, dtype=tf.float32), tf.Variable(pose, dtype=tf.float32), get_skin=True)
+    sess.run(tf.global_variables_initializer())
+    return sess.run(vertices)[0][0]
 
 
 def get_mano_faces():

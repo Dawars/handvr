@@ -78,3 +78,5 @@ def train():
               .format(epoch + 1, num_epochs, loss.item()))
 
     torch.save(model.state_dict(), './sim_autoencoder.pth')
+
+# train()
