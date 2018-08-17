@@ -9,7 +9,6 @@ import numpy as np
 import tensorflow as tf
 from tf_smpl.batch_smpl import SMPL
 
-print(tf.__version__)
 
 with open('mpi/data/mano/MANO_RIGHT_py3.pkl', 'rb') as f:
     mano_data = pickle.load(f, encoding='latin1')

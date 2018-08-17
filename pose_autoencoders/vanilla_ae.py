@@ -8,17 +8,16 @@ from torch.utils.data import DataLoader
 
 from pose_autoencoders.pose_loader import get_poses
 
-if not os.path.exists('./figures'):
-    os.mkdir('./figures')
+os.makedirs('./figures', exist_ok=True)
 
-num_epochs = 301
+num_epochs = 101
 batch_size = 64
 learning_rate = 1e-3
 torch.manual_seed(7)
 
-dataset = get_poses('mpi/data/mano/MANO_RIGHT_py3.pkl')
+dataset = get_poses()
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-poses = torch.Tensor(dataset).float().cuda()
+poses = torch.Tensor(dataset).float()  # .cuda()
 
 
 def plot_latent(latent, epoch):
@@ -49,7 +48,7 @@ class autoencoder(nn.Module):
 
 
 def train():
-    model = autoencoder().cuda()
+    model = autoencoder()  # .cuda()
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(
         model.parameters(), lr=learning_rate, weight_decay=1e-5)
@@ -59,7 +58,7 @@ def train():
 
             img = data.float()
             # img = img.view(img.size(0), -1)
-            img = Variable(img).cuda()
+            img = Variable(img)  # .cuda()
 
             # plot
             if epoch % 10 == 0:
@@ -79,4 +78,6 @@ def train():
 
     torch.save(model.state_dict(), './sim_autoencoder.pth')
 
-# train()
+
+if __name__ == '__main__':
+    train()
