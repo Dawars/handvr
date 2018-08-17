@@ -7,10 +7,11 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
 from pose_autoencoders.pose_loader import get_poses
+from utils.render_manifold import render_manifold
 
 os.makedirs('./figures', exist_ok=True)
 
-num_epochs = 101
+num_epochs = 301
 batch_size = 64
 learning_rate = 1e-3
 torch.manual_seed(7)
@@ -60,10 +61,6 @@ def train():
             # img = img.view(img.size(0), -1)
             img = Variable(img)  # .cuda()
 
-            # plot
-            if epoch % 10 == 0:
-                latent = model.encoder(poses)
-                plot_latent(latent.cpu().data.numpy(), epoch)
 
             # ===================forward=====================
             output = model(img)
@@ -75,6 +72,15 @@ def train():
         # ===================log========================
         print('epoch [{}/{}], reconstruction loss:{:.4f}'
               .format(epoch + 1, num_epochs, loss.item()))
+
+        # plot
+        if epoch % 10 == 0:
+            print('saving plots')
+            latent = model.encoder(poses)
+            plot_latent(latent.cpu().data.numpy(), epoch)
+
+            filename = "manifolds/vanilla/vanilla_manifold_{:03d}.png".format(epoch)
+            render_manifold(model.decoder, filename)
 
     torch.save(model.state_dict(), './sim_autoencoder.pth')
 

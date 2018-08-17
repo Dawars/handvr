@@ -1,6 +1,7 @@
 """
 Functions for rendering a single MANO model to image and manifold
 """
+import os
 
 from PIL import Image
 import numpy as np
@@ -12,7 +13,6 @@ from autolab_core import RigidTransform
 from perception import CameraIntrinsics
 from meshrender import Scene, MaterialProperties, AmbientLight, PointLight, SceneObject, VirtualCamera
 
-from pose_autoencoders.vanilla_ae import autoencoder
 from utils.mano_utils import *
 
 
@@ -27,7 +27,9 @@ def render_manifold(decoder, name="./manifold.png", bounds=(-4, 4), steps=0.5, i
     :param verbose: print progress
     :returns rendered image
     """
-    # Settings
+
+    os.makedirs(os.path.dirname(name), exist_ok=True)
+
     supersampling = 2.5  # don't change
     result_length = image_size * (bounds[1] - bounds[0]) / steps
 
@@ -43,7 +45,9 @@ def render_manifold(decoder, name="./manifold.png", bounds=(-4, 4), steps=0.5, i
     rot = np.zeros([batch_size, 3])
     shape = np.zeros([batch_size, 10])
 
-    decoded_poses = decoder(encoded).cpu().data.numpy()
+    decoded_poses = decoder(encoded)
+    decoded_poses = decoded_poses.cpu().detach().numpy()
+
 
     decoded_poses = np.concatenate((rot, decoded_poses), axis=1)
     vertices = get_mano_vertices(shape, decoded_poses)
@@ -168,6 +172,8 @@ if __name__ == '__main__':
     plt.imsave('rendering_test.png', img[0])
 
     # rendering manifold
+    from pose_autoencoders.vanilla_ae import autoencoder
+
     ae = autoencoder()  # Load a premade autoencoder
     ae.load_state_dict(torch.load('../pose_autoencoders/sim_autoencoder.pth'))
 
