@@ -2,17 +2,18 @@
 Functions for rendering a single MANO model to image and manifold
 """
 
+from PIL import Image
 import numpy as np
+from matplotlib import pyplot as plt
+import torch
+
 import trimesh
 from autolab_core import RigidTransform
 from perception import CameraIntrinsics
-
 from meshrender import Scene, MaterialProperties, AmbientLight, PointLight, SceneObject, VirtualCamera
 
-import torch
 from pose_autoencoders.vanilla_ae import autoencoder
 from utils.mano_utils import *
-from PIL import Image
 
 # Load a premade autoencoder
 ae = autoencoder()
@@ -159,4 +160,12 @@ def render_mano(mesh, image_size):
     return img
 
 
-render_manifold()
+if __name__ == '__main__':
+    # rendering mano
+    mesh = trimesh.Trimesh(vertices=get_mano_vertices(np.zeros([1, 10]), np.zeros([1, 48]))[0],
+                           faces=get_mano_faces(), process=False)
+    img = render_mano(mesh, 500)
+    plt.imsave('rendering_test.png', img[0])
+
+    # rendering manifold
+    # render_manifold()
