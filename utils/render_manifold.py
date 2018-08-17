@@ -12,7 +12,7 @@ from meshrender import Scene, MaterialProperties, AmbientLight, PointLight, Scen
 import torch
 from torch import nn
 from pose_autoencoders.pytorch_ae.vanilla_ae import autoencoder
-from utils.vertex_utils import get_mano_vertices, get_mano_faces
+from utils.vertex_utils import get_mano_vertices, get_mano_faces, mano_to_OBJ
 from PIL import Image
 
 import tensorflow as tf
@@ -24,16 +24,16 @@ ae.load_state_dict(torch.load('pose_autoencoders/pytorch_ae/sim_autoencoder.pth'
 
 # Settings
 
-image_w = 600  # Height of individual images
-image_h = 600
+image_w = 200  # Height of individual images
+image_h = 200
 
 step_x = 1
 step_y = 1
 
-grid_x_min = -6  # Dimensions of the space to render
-grid_x_max = -5
-grid_y_min = -6
-grid_y_max = -5
+grid_x_min = 0  # Dimensions of the space to render
+grid_x_max = 1
+grid_y_min = 0
+grid_y_max = 1
 
 result_w = image_w * (grid_x_max - grid_x_min)
 result_h = image_h * (grid_y_max - grid_y_min)
@@ -52,8 +52,12 @@ def render_manifold():
             mesh = trimesh.Trimesh(vertices=vertices, faces=get_mano_faces(), process=False)
 
             #img = Image.frombytes("RGB", size=(image_w, image_h), data=render_mano(mesh))
-            img = Image.fromarray(render_mano(mesh)[0], "RGB")
-            res.paste(img, (x * image_w, y * image_h))
+            raw = render_mano(mesh)[0]
+            img = Image.fromarray(raw, "RGB")
+            img.thumbnail((200, 200))
+            img.save("./test.png")
+            #mano_to_OBJ(shape, decoded_pose, "./test.obj")
+            #res.paste(img, (x * image_w, y * image_h))
     print("Images rendered")
     res.save("./manifold.png")
 
@@ -65,11 +69,15 @@ def render_mano(mesh):
     :return tuple of (image_h, image_w, 3) with rgb values as ints between 0 and 255:
     """
     # Start with an empty scene
-    scene = Scene()
+    scene = Scene(background_color=np.array([0, 0, 0]))
 
     # Set up pose in the world
     pose = RigidTransform(
-        rotation=np.eye(3),
+        rotation=np.array(
+            [[0.0, 0.0, 1.0],
+             [0.0, 1.0, .0],
+             [-1.0, 1.0, 0.0]]
+        ),
         translation=np.array([0.0, 0.0, 0.0]),
         from_frame='obj',
         to_frame='world'
@@ -77,12 +85,12 @@ def render_mano(mesh):
 
     # Set up each object's material properties
     cube_material = MaterialProperties(
-        color=np.array([0.1, 0.1, 0.5]),
+        color=np.array([1, 0.1, 0.2]),
         k_a=0.3,
         k_d=1.0,
         k_s=1.0,
         alpha=10.0,
-        smooth=False
+        smooth=True
     )
 
     # Create SceneObjects for each object
@@ -93,11 +101,18 @@ def render_mano(mesh):
     # Create an ambient light
     ambient = AmbientLight(
         color=np.array([1.0, 1.0, 1.0]),
-        strength=1.0
+        strength=0.5
     )
 
     # Add the lights to the scene
     scene.ambient_light = ambient  # only one ambient light per scene
+
+    point = PointLight(
+        location=np.array([1.0, 2.0, 3.0]),
+        color=np.array([1.0, 1.0, 1.0]),
+        strength=10.0
+    )
+    scene.add_light('point_light_one', point)
 
     # Set up camera intrinsics
     ci = CameraIntrinsics(
@@ -107,8 +122,8 @@ def render_mano(mesh):
         cx=319.5,
         cy=239.5,
         skew=0.0,
-        height=image_h,
-        width=image_w
+        height=480,
+        width=640
     )
 
     # Set up the camera pose (z axis faces away from scene, x to right, y up)
@@ -118,7 +133,7 @@ def render_mano(mesh):
             [0.0, 1.0, 0.0],
             [1.0, 0.0, 0.0]
         ]),
-        translation=np.array([-0.3, 0.0, 0.0]),
+        translation=np.array([0.3, 0.0, 0.0]),
         from_frame='camera',
         to_frame='world'
     )
