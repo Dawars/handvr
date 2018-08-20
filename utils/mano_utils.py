@@ -49,6 +49,25 @@ def save_mano_obj(model, save_path):
                 fp.write('f %d %d %d\n' % (f[0], f[1], f[2]))
 
 
+def remap_joints(joints):
+    """
+    Remap joint orientation params to follow the physical placement (thumb, index, middle, ring, pinky)
+    The order of joints for mano is: index, middle, pinky, ring, thumb
+    :param joints: array with joint rotations in mano format
+    :return: remapped array [batch_size, 5, 3x3]
+    """
+
+    indices = [
+        np.arange(4 * 9, 5 * 9, 1),
+        np.arange(0 * 9, 1 * 9, 1),
+        np.arange(1 * 9, 2 * 9, 1),
+        np.arange(3 * 9, 4 * 9, 1),
+        np.arange(2 * 9, 3 * 9, 1),
+    ]
+
+    return joints[:, indices]
+
+
 if __name__ == '__main__':
     batch_size = 2
 
