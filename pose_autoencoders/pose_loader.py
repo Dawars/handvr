@@ -16,12 +16,12 @@ import tensorflow as tf
 FLAGS = tf.flags.FLAGS
 
 
-def get_poses():
+def get_poses(data_file='../mpi/data/mano/MANO_RIGHT_py3.pkl'):
     """
     Return a Tensor containing the poses
     (1554, 45) - 3*15 = 45 joint anles for 1554 people
     """
-    with open('../mpi/data/mano/MANO_RIGHT_py3.pkl', 'rb') as f:
+    with open(data_file, 'rb') as f:
         mano_data = pickle.load(f, encoding='latin1')
 
     batch_size = mano_data['hands_coeffs'].shape[0]
@@ -32,7 +32,7 @@ def get_poses():
     # 3*15 = 45 joint angles
     hands_poses = np.matmul(hands_components, hands_coeffs)
 
-    print(FLAGS.batch_size)
+    #print(FLAGS.batch_size)
     return hands_poses
 
 
