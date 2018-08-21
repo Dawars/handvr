@@ -74,6 +74,6 @@ for epoch in range(num_epochs):
         optimizer.step()
     # ===================log========================
     print('epoch [{}/{}], reconstruction loss:{:.4f}'
-          .format(epoch + 1, num_epochs, loss.item(0)))
+          .format(epoch + 1, num_epochs, loss.item()))
 
 torch.save(model.state_dict(), './sim_autoencoder.pth')
