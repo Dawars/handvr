@@ -9,7 +9,6 @@ import numpy as np
 import tensorflow as tf
 from tf_smpl.batch_smpl import SMPL
 
-print(tf.__version__)
 
 with open('mpi/data/mano/MANO_RIGHT_py3.pkl', 'rb') as f:
     mano_data = pickle.load(f, encoding='latin1')
@@ -20,13 +19,13 @@ with tf.Session() as sess:
     # init MANO
     mano = SMPL(mano_data)
 
-    hands_components = tf.Variable(mano_data['hands_coeffs'], dtype=tf.float32)
-    hands_coeffs = tf.Variable(mano_data['hands_components'], dtype=tf.float32)
+    hands_components = tf.Variable(mano_data['hands_components'], dtype=tf.float32)
+    hands_coeffs = tf.Variable(mano_data['hands_coeffs'], dtype=tf.float32)
 
-    hands_poses = tf.matmul(hands_components, hands_coeffs)
+    hands_poses = tf.matmul(hands_coeffs, hands_components)
 
     # cam = N x 3, pose N x self.num_theta, shape: N x 10
-    rot = tf.Variable([[0,3.14/2,0]],expected_shape=[1,3])
+    rot = tf.Variable([[0, 3.14/2, 0]],expected_shape=[1,3])
     print(sess.run(tf.rank(rot)))
     cams = tf.tile(rot, [1554, 1])
 

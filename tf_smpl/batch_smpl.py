@@ -14,7 +14,7 @@ import numpy as np
 import pickle
 
 import tensorflow as tf
-from .batch_lbs import batch_rodrigues, batch_global_rigid_transformation
+from tf_smpl.batch_lbs import batch_rodrigues, batch_global_rigid_transformation
 
 
 # There are chumpy variables so convert them to numpy.
@@ -80,7 +80,7 @@ class SMPL(object):
         Theta includes the global rotation.
         Args:
           beta: N x 10
-          theta: N x 135 (with 3-D axis-angle rep)
+          theta: N x 48 (with 3-D axis-angle rep)
 
         Updates:
         self.J_transformed: N x 16 x 3 joint location after shaping
@@ -119,7 +119,7 @@ class SMPL(object):
                 tf.matmul(pose_feature, self.posedirs),
                 [-1, self.size[0], self.size[1]]) + v_shaped
 
-            #4. Get the global joint location
+            # 4. Get the global joint location
             self.J_transformed, A = batch_global_rigid_transformation(Rs, J, self.parents)
 
             # 5. Do skinning:
@@ -148,3 +148,43 @@ class SMPL(object):
                 return joints
 
 
+if __name__ == '__main__':
+    """
+    Obtain SMPL with shape (beta) & pose (theta) inputs.
+    Theta includes the global rotation.
+    Args:
+    beta: N x 10
+    theta: N x 48 (with 3-D axis-angle rep)
+    
+    Returns:
+    - joints: N x 16 joint locations 
+    If get_skin is True, also returns
+    - Verts: N x 778 x 3
+    """
+
+    with open('../mpi/data/mano/MANO_RIGHT_py3.pkl', 'rb') as f:
+        mano_data = pickle.load(f, encoding='latin1')
+
+        # init MANO
+    mano = SMPL(mano_data)
+
+    batch_size = 5
+
+    # processing `batch_size` models at once
+    with tf.Session() as sess:
+        rot = tf.Variable([[0, 3.14 / 2, 0]], expected_shape=[1, 3])  # global rotation
+        cams = tf.tile(rot, [batch_size, 1])
+
+        hands_poses = tf.random_uniform([batch_size, 45], -np.pi / 2, np.pi / 2, dtype=tf.float32)
+
+        poses = tf.Variable(tf.concat([cams, mano_data['hands_mean'] + hands_poses], axis=1))
+        shapes = tf.Variable(tf.zeros([batch_size, 10]))
+
+        # init vars
+        sess.run(tf.global_variables_initializer())
+
+        verts, joints, Rs = mano(shapes, poses, get_skin=True)
+
+        model_verts = sess.run(verts)
+        print(model_verts.shape)
+        print(model_verts)
