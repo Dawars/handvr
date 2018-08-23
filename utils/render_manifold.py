@@ -38,6 +38,8 @@ fragment_shader = '''
                    }
                    '''
 
+num_vertices = 778
+
 
 class HandRenderer:
     def __init__(self, image_size=128, sess=None):
@@ -53,6 +55,8 @@ class HandRenderer:
 
         self.image_size = image_size
 
+        self.normals = np.zeros([num_vertices, 3], dtype=np.dtype('f4'))
+
         # graphics
         self.ctx = moderngl.create_standalone_context()
 
@@ -61,12 +65,14 @@ class HandRenderer:
             fragment_shader=fragment_shader,
         )
 
-        self.vbo = self.ctx.buffer(reserve=778 * 3 * 4, dynamic=True)
+        self.vboPos = self.ctx.buffer(reserve=num_vertices * 3 * 4, dynamic=True)
+        self.vboNormal = self.ctx.buffer(reserve=num_vertices * 3 * 4, dynamic=True)
         self.ibo = self.ctx.buffer(get_mano_faces().astype('i4').tobytes())
 
         vao_content = [
             # 3 floats are assigned to the 'in' variable named 'in_vert' in the shader code
-            (self.vbo, '3f', 'in_vert')
+            (self.vboPos, '3f', 'in_vert'),
+            (self.vboNormal, '3f', 'in_normal'),
         ]
 
         self.vao = self.ctx.vertex_array(self.prog, vao_content, self.ibo)
@@ -80,7 +86,7 @@ class HandRenderer:
         self.sess.close()
 
         self.prog.release()
-        self.vbo.release()
+        self.vboPos.release()
         self.ibo.release()
         self.vao.release()
         self.fbo1.release()
@@ -151,7 +157,8 @@ class HandRenderer:
         # https://gamedev.stackexchange.com/questions/152991/how-can-i-calculate-normals-using-a-vertex-and-index-buffer
         # http://www.opengl-tutorial.org/beginners-tutorials/tutorial-8-basic-shading/#triangle-normals
 
-        self.vbo.write(vertices.astype('f4').tobytes())
+        self.vboPos.write(vertices.astype('f4').tobytes())
+        self.vboNormal.write(self.normals.astype('f4').tobytes())
 
         # Rendering
         self.fbo1.use()
