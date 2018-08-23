@@ -7,11 +7,11 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
 from pose_autoencoders.pose_loader import get_poses
-from utils.render_manifold import render_manifold
+from utils.render_manifold import HandRenderer
 
 os.makedirs('./figures', exist_ok=True)
 
-num_epochs = 301
+num_epochs = 1500
 batch_size = 64
 learning_rate = 1e-3
 torch.manual_seed(7)
@@ -26,7 +26,7 @@ def plot_latent(latent, epoch):
     plt.title("Vanilla Autoencoder latent space at epoch {}".format(epoch))
     plt.xlim([-6, 6])
     plt.ylim([-6, 6])
-    plt.savefig("figures/pose_ae_latent_{0:03d}.png".format(epoch))
+    plt.savefig("figures/pose_ae_latent_{0:04d}.png".format(epoch))
     plt.close()
 
 
@@ -54,13 +54,13 @@ def train():
     optimizer = torch.optim.Adam(
         model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
+    renderer = HandRenderer()
+
     for epoch in range(num_epochs):
         for data in dataloader:
-
             img = data.float()
             # img = img.view(img.size(0), -1)
             img = Variable(img)  # .cuda()
-
 
             # ===================forward=====================
             output = model(img)
@@ -70,17 +70,16 @@ def train():
             loss.backward()
             optimizer.step()
         # ===================log========================
-        print('epoch [{}/{}], reconstruction loss:{:.4f}'
-              .format(epoch + 1, num_epochs, loss.item()))
 
         # plot
         if epoch % 10 == 0:
-            print('saving plots')
+            print('epoch [{}/{}], reconstruction loss:{:.4f}'.format(epoch + 1, num_epochs, loss.item()))
+
             latent = model.encoder(poses)
             plot_latent(latent.cpu().data.numpy(), epoch)
 
-            filename = "manifolds/vanilla/vanilla_manifold_{:03d}.png".format(epoch)
-            render_manifold(model.decoder, filename)
+            filename = "manifolds/vanilla/vanilla_manifold_{:04d}.png".format(epoch)
+            renderer.render_manifold(model.decoder, filename)
 
     torch.save(model.state_dict(), './sim_autoencoder.pth')
 

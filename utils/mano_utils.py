@@ -75,4 +75,6 @@ if __name__ == '__main__':
         vertices = get_mano_vertices(np.zeros([batch_size, 10]), np.zeros([batch_size, 48]), sess)
         print(vertices)
 
-        save_mano_obj(vertices[0], "./mano_objs")
+    remapped = remap_joints(get_poses())
+
+    print('done')
