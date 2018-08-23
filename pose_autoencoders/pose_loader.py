@@ -8,7 +8,7 @@ from utils.mano_utils import mano_data
 
 def get_poses():
     """
-    Return a Tensor containing the poses
+    Return a Tensor containing the normalized poses (add 'hands_mean' to get real values)
     (1554, 45) - 3*15 = 45 joint anles for 1554 people
     """
 
