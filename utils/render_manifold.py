@@ -73,7 +73,7 @@ class HandRenderer:
 
         # Framebuffers
 
-        self.fbo1 = self.ctx.framebuffer(self.ctx.renderbuffer((image_size, image_size), samples=4))
+        self.fbo1 = self.ctx.framebuffer(self.ctx.renderbuffer((image_size, image_size), samples=1))
         self.fbo2 = self.ctx.framebuffer(self.ctx.renderbuffer((image_size, image_size)))
 
     def __del__(self):
@@ -107,7 +107,7 @@ class HandRenderer:
 
         _, cols, rows = sampling_grid.shape
 
-        encoded = torch.tensor(encoded, dtype=torch.float)
+        encoded = torch.tensor(encoded, dtype=torch.float).cuda()
         batch_size = len(encoded)
 
         rot = np.zeros([batch_size, 3])

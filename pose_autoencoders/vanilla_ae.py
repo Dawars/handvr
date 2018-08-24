@@ -18,7 +18,7 @@ torch.manual_seed(7)
 
 dataset = get_poses()
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-poses = torch.Tensor(dataset).float()  # .cuda()
+poses = torch.Tensor(dataset).float().cuda()
 
 
 def plot_latent(latent, epoch):
@@ -49,7 +49,7 @@ class autoencoder(nn.Module):
 
 
 def train():
-    model = autoencoder()  # .cuda()
+    model = autoencoder().cuda()
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(
         model.parameters(), lr=learning_rate, weight_decay=1e-5)
@@ -60,10 +60,10 @@ def train():
         for data in dataloader:
             img = data.float()
             # img = img.view(img.size(0), -1)
-            img = Variable(img)  # .cuda()
+            img = Variable(img).cuda()
 
             # ===================forward=====================
-            output = model(img)
+            output = model(img).cuda()
             loss = criterion(output, img)
             # ===================backward====================
             optimizer.zero_grad()
