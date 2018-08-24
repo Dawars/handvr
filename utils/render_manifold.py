@@ -182,7 +182,10 @@ if __name__ == '__main__':
     i = 3 + 3 * finger + joint
     pose[0, i + 1] = np.pi / 2
 
-    poses = get_mano_vertices(np.zeros([1, 10]), pose)
+    from block_timer.timer import Timer
+
+    with Timer():
+        poses = get_mano_vertices(np.zeros([1, 10]), pose)
 
     img = renderer.render_mano(poses[0])
 
@@ -191,7 +194,7 @@ if __name__ == '__main__':
     # rendering manifold
     from pose_autoencoders.vanilla_ae import autoencoder
 
-    ae = autoencoder()  # Load a premade autoencoder
+    ae = autoencoder().cuda()  # Load a premade autoencoder
     ae.load_state_dict(torch.load('../pose_autoencoders/sim_autoencoder.pth'))
 
     import time

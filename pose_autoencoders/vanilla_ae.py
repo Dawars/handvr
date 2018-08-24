@@ -74,9 +74,10 @@ def train():
         # plot
         if epoch % 10 == 0:
             print('epoch [{}/{}], reconstruction loss:{:.4f}'.format(epoch + 1, num_epochs, loss.item()))
+        if epoch % 50 == 0:
 
             latent = model.encoder(poses)
-            plot_latent(latent.cpu().data.numpy(), epoch)
+            plot_latent(latent.cpu().detach().numpy(), epoch)
 
             filename = "manifolds/vanilla/vanilla_manifold_{:04d}.png".format(epoch)
             renderer.render_manifold(model.decoder, filename)

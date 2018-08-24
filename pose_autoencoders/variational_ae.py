@@ -12,7 +12,7 @@ from utils.render_manifold import HandRenderer
 
 os.makedirs('./var_figures', exist_ok=True)
 
-num_epochs = 151
+num_epochs = 1501
 batch_size = 64
 learning_rate = 1e-3
 torch.manual_seed(7)
@@ -23,7 +23,6 @@ poses = torch.Tensor(dataset).float().cuda()
 
 
 def plot_latent(latent, epoch):
-    os.makedirs('var_figures', exist_ok=True)
     plt.plot(*(latent.transpose()), '.', color='blue')
     plt.title("Variational Autoencoder latent space at epoch {}".format(epoch))
     plt.xlim([-6, 6])
@@ -85,7 +84,7 @@ def train():
     optimizer = torch.optim.Adam(
         model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
-    renderer = HandRenderer()
+    renderer = HandRenderer(64)
 
     for epoch in range(num_epochs):
         for data in dataloader:
@@ -104,16 +103,16 @@ def train():
         # ===================log========================
 
         # plot
-        if epoch % 10 == 0:
+        if epoch % 100 == 0:
             print(
                 'epoch [{}/{}], reconstruction loss:{:.4f}, KLD: {:.4f}'.format(epoch + 1, num_epochs, gen_loss.item(),
                                                                                 latent_loss.item()))
 
             latent, _ = model.encoder(poses)
-            plot_latent(latent.cpu().data.numpy(), epoch)
+            plot_latent(latent.cpu().detach().numpy(), epoch)
 
             filename = "manifolds/var/var_manifold_{:04d}.png".format(epoch)
-            renderer.render_manifold(model.decoder, filename)
+            renderer.render_manifold(model.decoder, filename, bounds=(-2, 2), steps=0.25)
 
     torch.save(model.state_dict(), './sim_var_autoencoder.pth')
 
