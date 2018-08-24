@@ -23,6 +23,7 @@ poses = torch.Tensor(dataset).float().cuda()
 
 
 def plot_latent(latent, epoch):
+    os.makedirs('var_figures', exist_ok=True)
     plt.plot(*(latent.transpose()), '.', color='blue')
     plt.title("Variational Autoencoder latent space at epoch {}".format(epoch))
     plt.xlim([-6, 6])
@@ -54,7 +55,7 @@ class autoencoder(nn.Module):
             return self.l_encode_mean(x)
 
     def reparametize(self, means, std):
-        std = torch.exp(0.5*std)
+        std = torch.exp(0.5 * std)
         random_samples = torch.randn_like(std)
         return std.mul(random_samples).add_(means)
 
@@ -71,9 +72,13 @@ class autoencoder(nn.Module):
 
 def loss_fcn(real_img, gen_img, mean, std):
     gen_loss = functional.mse_loss(gen_img, real_img)
-    latent_loss = 0.5 * torch.sum(1 + mean.pow(2) + std.pow(2) - torch.log(std.pow(2)))
+    latent_loss = 0.5 * torch.sum(mean.pow(2) + std.pow(2) - torch.log(std) - 1)
+
+    latent_loss /= batch_size
+    latent_loss /= 45
 
     return gen_loss, latent_loss
+
 
 def train():
     model = autoencoder().cuda()
@@ -100,7 +105,9 @@ def train():
 
         # plot
         if epoch % 10 == 0:
-            print('epoch [{}/{}], reconstruction loss:{:.4f}, KLD: {:.4f}'.format(epoch + 1, num_epochs, gen_loss.item(), latent_loss.item()))
+            print(
+                'epoch [{}/{}], reconstruction loss:{:.4f}, KLD: {:.4f}'.format(epoch + 1, num_epochs, gen_loss.item(),
+                                                                                latent_loss.item()))
 
             latent, _ = model.encoder(poses)
             plot_latent(latent.cpu().data.numpy(), epoch)
