@@ -75,6 +75,7 @@ if __name__ == '__main__':
         vertices = get_mano_vertices(np.zeros([batch_size, 10]), np.zeros([batch_size, 48]), sess)
         print(vertices)
 
+    from pose_autoencoders.pose_loader import get_poses
     remapped = remap_joints(get_poses())
 
     print('done')
