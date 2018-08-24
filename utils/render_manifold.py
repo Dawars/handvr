@@ -18,7 +18,7 @@ vertex_shader = '''
                out vec3 out_normal;
                void main() {
                    gl_Position = vec4(in_vert, 1.0);
-                   out_normal = in_normal;
+                   out_normal = normalize(in_normal);
                }
                '''
 fragment_shader = '''
@@ -26,15 +26,15 @@ fragment_shader = '''
                    in vec3 out_normal;
                    out vec4 f_color;
 
-                   const vec3 lightDir = vec3(1, 1, 1);
+                   const vec3 lightDir = vec3(1, -1, 1);
                    void main() {
                        vec3 light = -normalize(lightDir);
 
                        vec3 normal = normalize(out_normal);
-                       float lambert = min(0, dot(normal, light));
+                       float lambert = max(0, dot(normal, light));
 
-                       vec3 color = lambert * vec3(1.0, 0.0, 0.0);
-                       f_color = vec4(color, 1.0);
+                       vec3 color = (0+lambert )* vec3(1.0, -1.0, 0.0);
+                       f_color = vec4(normal, 1.0);
                    }
                    '''
 
@@ -157,6 +157,9 @@ class HandRenderer:
         # https://gamedev.stackexchange.com/questions/152991/how-can-i-calculate-normals-using-a-vertex-and-index-buffer
         # http://www.opengl-tutorial.org/beginners-tutorials/tutorial-8-basic-shading/#triangle-normals
 
+        self.normals.fill(0)
+        self.calc_normals(vertices)
+
         self.vboPos.write(vertices.astype('f4').tobytes())
         self.vboNormal.write(self.normals.astype('f4').tobytes())
 
@@ -175,6 +178,18 @@ class HandRenderer:
         # img.show()
         return img
 
+    def calc_normals(self, vertices):
+        for i, j, k in get_mano_faces():
+            edge1 = vertices[i] - vertices[j]
+            edge2 = vertices[i] - vertices[k]
+
+            normal = np.cross(edge1, edge2)
+            # normal /= np.linalg.norm(normal, 2, 0)
+
+            self.normals[i] += normal
+            self.normals[j] += normal
+            self.normals[k] += normal
+
 
 if __name__ == '__main__':
     renderer = HandRenderer(128)
@@ -183,15 +198,22 @@ if __name__ == '__main__':
     # over ssh run with alias xpy='xvfb-run -s "-screen 0 1x1x24" python3'
     # xpy -m ModernGL
     # source https://github.com/cprogrammer1994/ModernGL/tree/master/examples
-    pose = np.zeros([1, 48])
-    finger = 0
-    joint = 0
-    i = 3 + 3 * finger + joint
-    pose[0, i + 1] = np.pi / 2
+    pose = np.concatenate([np.array([[np.pi / 2, 0, 0]]), np.zeros([1, 45])], axis=1)
 
+    start = time.time()
+    # for i in range(100):
     poses = get_mano_vertices(np.zeros([1, 10]), pose)
+    end = time.time()
 
+    elapsed = end - start
+    print(elapsed)
+
+    start = time.time()
     img = renderer.render_mano(poses[0])
+    end = time.time()
+
+    elapsed = end - start
+    print(elapsed)
 
     plt.imsave('rendering_test.png', img)
 
