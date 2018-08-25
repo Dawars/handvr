@@ -72,10 +72,16 @@ if __name__ == '__main__':
     batch_size = 2
 
     with tf.Session() as sess:
+        # morph and skin
         vertices = get_mano_vertices(np.zeros([batch_size, 10]), np.zeros([batch_size, 48]), sess)
         print(vertices)
 
+        # save obj
+        save_mano_obj(vertices, './')
+
+    # remap joints for physical proximity
     from pose_autoencoders.pose_loader import get_poses
+
     remapped = remap_joints(get_poses())
 
     print('done')
