@@ -89,7 +89,7 @@ class HandRenderer:
     def render_manifold(self, decoder, name="./manifold.png", bounds=(-4, 4), steps=0.5, verbose=False):
         """
         Render a 2D posed hand manifold
-        :param decoder: pytorch decoder function 2 -> 45 params
+        :param decoder: pytorch decoder function 2 -> 45 params, should be called with torch.no_grad():
         :param name: filename
         :param bounds: bounds of the sampling along the x and y axis
         :param steps: step size for sampling between the bounds
@@ -114,7 +114,7 @@ class HandRenderer:
         shape = np.zeros([batch_size, 10])
 
         decoded_poses = decoder(encoded)
-        decoded_poses = decoded_poses.cpu().detach().numpy() + mano_data['hands_mean']
+        decoded_poses = decoded_poses.cpu().numpy() + mano_data['hands_mean']
 
         decoded_poses = np.concatenate((rot, decoded_poses), axis=1)
         vertices = get_mano_vertices(shape, decoded_poses, sess=self.sess)
