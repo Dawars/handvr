@@ -8,9 +8,9 @@ services:
      - "/home/dawars/datasets:/datasets"
      - "/cache:/cache"
      - "/tmp/.docker.xauth:/tmp/.docker.xauth"
+    command: /bin/bash
     environment:
-     - "DISPLAY=172.17.0.1:10.0"
-     - "XAUTHORITY=/tmp/.docker.xauth"
+     - "DISPLAY"
   tensorboard:
     image: dawars/dl-py3:gpu
     volumes:
