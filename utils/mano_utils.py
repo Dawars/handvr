@@ -2,27 +2,32 @@ import os
 import pickle
 
 import numpy as np
-import tensorflow as tf
+import torch
+from block_timer.timer import Timer
 
-from tf_smpl.batch_smpl import SMPL
+from smpl.batch_smpl import SMPL
 
 with open('../mpi/data/mano/MANO_RIGHT_py3.pkl', 'rb') as f:
     mano_data = pickle.load(f, encoding='latin1')
 
-mano = SMPL(mano_data)
+mano = SMPL(mano_data).cuda()  # not good
 
 
-def get_mano_vertices(shape, pose, sess=tf.Session()):
+def get_mano_vertices(shape, pose, device=torch.device('cpu')):
     """
-
-    :param sess: TensorFlow session to run with
     :param shape: mano shape params [batch_size, 10]
     :param pose: mano pose params including global rotation (joint axis-angle representation) [batch_size, 45+3]
     :return:
     """
-    verts, joints, Rs = mano(tf.Variable(shape, dtype=tf.float32), tf.Variable(pose, dtype=tf.float32), get_skin=True)
-    sess.run(tf.global_variables_initializer())
-    return sess.run(verts)
+    # check if not tensor: wrap
+    if not isinstance(shape, torch.Tensor):
+        shape = torch.tensor(shape, dtype=torch.float).cuda()
+
+    if not isinstance(pose, torch.Tensor):
+        pose = torch.tensor(pose, dtype=torch.float).cuda()
+
+    verts, joints, Rs = mano(shape, pose, get_skin=True)
+    return verts.cpu().detach().numpy()
 
 
 def get_mano_faces():
@@ -69,15 +74,15 @@ def remap_joints(joints):
 
 
 if __name__ == '__main__':
-    batch_size = 2
+    batch_size = 5
 
-    with tf.Session() as sess:
-        # morph and skin
-        vertices = get_mano_vertices(np.zeros([batch_size, 10]), np.zeros([batch_size, 48]), sess)
+    # morph and skin
+    with Timer():
+        vertices = get_mano_vertices(np.zeros([batch_size, 10]), np.zeros([batch_size, 48]))
         print(vertices)
 
-        # save obj
-        save_mano_obj(vertices, './')
+    # save obj
+    save_mano_obj(vertices, './')
 
     # remap joints for physical proximity
     from pose_autoencoders.pose_loader import get_poses

@@ -7,7 +7,7 @@ import pickle
 
 import numpy as np
 import tensorflow as tf
-from tf_smpl.batch_smpl import SMPL
+from smpl.batch_smpl import SMPL
 
 
 with open('mpi/data/mano/MANO_RIGHT_py3.pkl', 'rb') as f:

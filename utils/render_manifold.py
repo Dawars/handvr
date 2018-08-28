@@ -40,16 +40,11 @@ fragment_shader = '''
 
 
 class HandRenderer:
-    def __init__(self, image_size=128, sess=None):
+    def __init__(self, image_size=128):
         """
         Class for rendering a hand from parameters or manifold
-        :param sess:
         :param image_size: size of a single hand image
         """
-        if sess is not None:
-            self.sess = sess
-        else:
-            self.sess = tf.Session()
 
         self.image_size = image_size
 
@@ -73,11 +68,10 @@ class HandRenderer:
 
         # Framebuffers
 
-        self.fbo1 = self.ctx.framebuffer(self.ctx.renderbuffer((image_size, image_size), samples=1))
+        self.fbo1 = self.ctx.framebuffer(self.ctx.renderbuffer((image_size, image_size), samples=4))
         self.fbo2 = self.ctx.framebuffer(self.ctx.renderbuffer((image_size, image_size)))
 
     def __del__(self):
-        self.sess.close()
 
         self.prog.release()
         self.vbo.release()
@@ -114,10 +108,10 @@ class HandRenderer:
         shape = np.zeros([batch_size, 10])
 
         decoded_poses = decoder(encoded)
-        decoded_poses = decoded_poses.cpu().numpy() + mano_data['hands_mean']
+        decoded_poses = decoded_poses.cpu().detach().numpy() + mano_data['hands_mean']
 
         decoded_poses = np.concatenate((rot, decoded_poses), axis=1)
-        vertices = get_mano_vertices(shape, decoded_poses, sess=self.sess)
+        vertices = get_mano_vertices(shape, decoded_poses)
 
         res = Image.new("RGB", (int(result_length), int(result_length)))
         for x in range(cols):
@@ -173,9 +167,6 @@ if __name__ == '__main__':
     renderer = HandRenderer(128)
 
     # rendering mano
-    # over ssh run with alias xpy='xvfb-run -s "-screen 0 1x1x24" python3'
-    # xpy -m ModernGL
-    # source https://github.com/cprogrammer1994/ModernGL/tree/master/examples
     pose = np.zeros([1, 48])
     finger = 0
     joint = 0
@@ -184,10 +175,10 @@ if __name__ == '__main__':
 
     from block_timer.timer import Timer
 
-    with Timer():
-        poses = get_mano_vertices(np.zeros([1, 10]), pose)
+    poses = get_mano_vertices(np.zeros([1, 10]), pose)
 
-    img = renderer.render_mano(poses[0])
+    with Timer():
+        img = renderer.render_mano(poses[0])
 
     plt.imsave('rendering_test.png', img)
 
@@ -197,11 +188,5 @@ if __name__ == '__main__':
     ae = autoencoder().cuda()  # Load a premade autoencoder
     ae.load_state_dict(torch.load('../pose_autoencoders/sim_autoencoder.pth'))
 
-    import time
-
-    start = time.time()
-    renderer.render_manifold(ae.decoder, './manifold_test.png', verbose=False)
-    end = time.time()
-
-    elapsed = end - start
-    print(elapsed)
+    with Timer():
+        renderer.render_manifold(ae.decoder, './manifold_test.png', verbose=False)
