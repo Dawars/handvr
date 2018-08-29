@@ -60,6 +60,9 @@ class HandRenderer:
         # graphics
         self.ctx = moderngl.create_standalone_context()
 
+        self.ctx.enable(moderngl.DEPTH_TEST)
+        self.ctx.enable(moderngl.CULL_FACE)
+        
         self.prog = self.ctx.program(
             vertex_shader=vertex_shader,
             fragment_shader=fragment_shader,
@@ -165,7 +168,6 @@ class HandRenderer:
 
         # Rendering
         self.fbo1.use()
-        self.ctx.enable(moderngl.DEPTH_TEST)
         self.ctx.clear(0.9, 0.9, 0.9)
         self.vao.render()
 
