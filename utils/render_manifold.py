@@ -156,9 +156,7 @@ class HandRenderer:
         """
         vertices = mano_vertices * 10.
 
-        # todo calculate normals
-        # https://gamedev.stackexchange.com/questions/152991/how-can-i-calculate-normals-using-a-vertex-and-index-buffer
-        # http://www.opengl-tutorial.org/beginners-tutorials/tutorial-8-basic-shading/#triangle-normals
+        # todo batch normal calculation outside this function in pytorch with cuda
 
         self.normals.fill(0)
         self.calc_normals(vertices)
@@ -180,26 +178,27 @@ class HandRenderer:
         # img.show()
         return img
 
-    def calc_normals(self, vertices):
-        for i, j, k in get_mano_faces():
-            edge1 = vertices[i] - vertices[j]
-            edge2 = vertices[i] - vertices[k]
+     def calc_normals(self, vertices):
 
-            normal = np.cross(edge1, edge2)
-            # normal /= np.linalg.norm(normal, 2, 0)
+        index = get_mano_faces()
+        edge1 = vertices[index[:, 2]] - vertices[index[:, 1]]
+        edge2 = vertices[index[:, 0]] - vertices[index[:, 1]]
 
-            self.normals[i] += normal
-            self.normals[j] += normal
-            self.normals[k] += normal
+        normal = np.cross(edge1, edge2)  # face normals
+
+        for i, face, in enumerate(index):  # todo speedup: gather -> sum
+            x, y, z = face
+            self.normals[x] += normal[i]
+            self.normals[y] += normal[i]
+            self.normals[z] += normal[i]
+
+        # self.normals /= np.linalg.norm(self.normals, 2, 0) # normalize in shader
 
 
 if __name__ == '__main__':
     renderer = HandRenderer(128)
 
     # rendering mano
-    # over ssh run with alias xpy='xvfb-run -s "-screen 0 1x1x24" python3'
-    # xpy -m ModernGL
-    # source https://github.com/cprogrammer1994/ModernGL/tree/master/examples
     pose = np.concatenate([np.array([[np.pi / 2, 0, 0]]), np.zeros([1, 45])], axis=1)
 
     start = time.time()
