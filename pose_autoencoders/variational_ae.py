@@ -1,7 +1,10 @@
+import io
 import os
 
+import PIL
 import matplotlib.pyplot as plt
 import torch
+import numpy as np
 from torch import nn
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
@@ -9,10 +12,15 @@ from torch.nn import functional
 
 from pose_autoencoders.pose_loader import get_poses
 from utils.render_manifold import HandRenderer
+from tensorboardX import SummaryWriter
+import torchvision
 
-os.makedirs('./var_figures', exist_ok=True)
+#os.makedirs('./var_figures', exist_ok=True)
 
-num_epochs = 1501
+# todo add logdir args
+log_dir = "/home/dawars/projects/logdir/variational_ae"
+
+num_epochs = 5001
 batch_size = 64
 learning_rate = 1e-3
 torch.manual_seed(7)
@@ -22,13 +30,18 @@ dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 poses = torch.Tensor(dataset).float().cuda()
 
 
-def plot_latent(latent, epoch):
-    plt.plot(*(latent.transpose()), '.', color='blue')
-    plt.title("Variational Autoencoder latent space at epoch {}".format(epoch))
-    plt.xlim([-6, 6])
-    plt.ylim([-6, 6])
-    plt.savefig("var_figures/pose_vae_latent_{0:04d}.png".format(epoch))
+def plot_latent(latent, bounds=(), color=(1, 0, 0)):
+    plt.plot(*(latent.transpose()), '.', color=color)
+    plt.xlim(*bounds)
+    plt.ylim(*bounds)
+    plt.axis('off')
+    # plt.savefig("var_figures/pose_vae_latent_{0:04d}.png".format(epoch))
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
     plt.close()
+    return buf
+
 
 
 class autoencoder(nn.Module):
@@ -80,9 +93,13 @@ def loss_fcn(real_img, gen_img, mean, std):
 
 
 def train():
+    writer = SummaryWriter(log_dir=log_dir)
+    to_tensor = torchvision.transforms.ToTensor()  # convert PIL image to tensor for tensorboard
+
+    color = (0, 1, 0)  # todo randomize from hypterparams
+
     model = autoencoder().cuda()
-    optimizer = torch.optim.Adam(
-        model.parameters(), lr=learning_rate, weight_decay=1e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
     renderer = HandRenderer(64)
 
@@ -95,7 +112,7 @@ def train():
             # ===================forward=====================
             output, mean, std = model(img)
             gen_loss, latent_loss = loss_fcn(img, output, mean, std)
-            loss = gen_loss + latent_loss
+            loss = 5 * gen_loss + latent_loss
             # ===================backward====================
             optimizer.zero_grad()
             loss.backward()
@@ -104,17 +121,24 @@ def train():
 
         # plot
         if epoch % 100 == 0:
+            # todo tb save util, values as dict as {dict}
+            writer.add_scalar('loss/reconstruction_loss', gen_loss.item(), epoch)
+            writer.add_scalar('loss/kld_loss', latent_loss.item(), epoch)
             print(
-                'epoch [{}/{}], reconstruction loss:{:.4f}, KLD: {:.4f}'.format(epoch + 1, num_epochs, gen_loss.item(),
+                'epoch [{}/{}], reconstruction loss:{:.4f}, KLD: {:.4f}'.format(epoch, num_epochs, gen_loss.item(),
                                                                                 latent_loss.item()))
 
             latent, _ = model.encoder(poses)
-            plot_latent(latent.cpu().detach().numpy(), epoch)
 
-            filename = "manifolds/var/var_manifold_{:04d}.png".format(epoch)
-            renderer.render_manifold(model.decoder, filename, bounds=(-2, 2), steps=0.25)
+            bounds = (-6, 6)
+            latent_plot = plot_latent(latent.cpu().detach().numpy(), bounds=bounds, color=color)
+            image = PIL.Image.open(latent_plot)
+            writer.add_image("latent_space", to_tensor(image), epoch)
 
-    torch.save(model.state_dict(), './sim_var_autoencoder.pth')
+            manifold = renderer.render_manifold(model.decoder, filename=None, bounds=bounds, color=color)
+            writer.add_image("manifold", to_tensor(manifold), epoch)
+
+            torch.save(model.state_dict(), "./variational_autoencoder_{}.pth".format(epoch))
 
 
 if __name__ == '__main__':
