@@ -12,17 +12,16 @@ import torch
 from utils.mano_utils import *
 
 vertex_shader = '''
-               #version 330
+               #version 330 core
                in vec3 in_vert;
-               in vec3 in_normal;
-               out vec3 out_normal;
+                //out vec3 out_normal;
+
                void main() {
                    gl_Position = vec4(in_vert, 1.0);
-                   out_normal = normalize(in_normal);
                }
                '''
 fragment_shader = '''
-                   #version 330
+                   #version 330 core
                    in vec3 out_normal;
                    out vec4 f_color;
 
@@ -33,49 +32,62 @@ fragment_shader = '''
                        vec3 normal = normalize(out_normal);
                        float lambert = max(0, dot(normal, light));
 
-                       vec3 color = (0+lambert )* vec3(1.0, -1.0, 0.0);
+                       vec3 color = lambert * vec3(1.0, 0.0, 0.0);
                        f_color = vec4(normal, 1.0);
                    }
                    '''
+geometry_shader = '''
+#version 330 core
+
+layout(triangles) in;
+layout(triangle_strip, max_vertices = 3) out;
+
+out vec3 out_normal;
+
+void main() {
+    vec4 edge1 = gl_in[0].gl_Position - gl_in[1].gl_Position;
+    vec4 edge2 = gl_in[0].gl_Position - gl_in[2].gl_Position;
+    out_normal = cross(edge1.xyz, edge2.xyz);
+    
+    for(int i = 0; i < 3; i++) {
+        gl_Position = gl_in[i].gl_Position;
+        EmitVertex();
+    }
+    EndPrimitive();
+}
+'''
 
 num_vertices = 778
 
 
 class HandRenderer:
-    def __init__(self, image_size=128, sess=None):
+    def __init__(self, image_size=128):
         """
         Class for rendering a hand from parameters or manifold
-        :param sess:
         :param image_size: size of a single hand image
         """
-        if sess is not None:
-            self.sess = sess
-        else:
-            self.sess = tf.Session()
 
         self.image_size = image_size
-
-        self.normals = np.zeros([num_vertices, 3], dtype=np.dtype('f4'))
 
         # graphics
         self.ctx = moderngl.create_standalone_context()
 
         self.ctx.enable(moderngl.DEPTH_TEST)
         self.ctx.enable(moderngl.CULL_FACE)
-        
+
         self.prog = self.ctx.program(
             vertex_shader=vertex_shader,
             fragment_shader=fragment_shader,
+            geometry_shader=geometry_shader
         )
 
         self.vboPos = self.ctx.buffer(reserve=num_vertices * 3 * 4, dynamic=True)
-        self.vboNormal = self.ctx.buffer(reserve=num_vertices * 3 * 4, dynamic=True)
+
         self.ibo = self.ctx.buffer(get_mano_faces().astype('i4').tobytes())
 
         vao_content = [
             # 3 floats are assigned to the 'in' variable named 'in_vert' in the shader code
-            (self.vboPos, '3f', 'in_vert'),
-            (self.vboNormal, '3f', 'in_normal'),
+            (self.vboPos, '3f', 'in_vert')
         ]
 
         self.vao = self.ctx.vertex_array(self.prog, vao_content, self.ibo)
@@ -86,7 +98,6 @@ class HandRenderer:
         self.fbo2 = self.ctx.framebuffer(self.ctx.renderbuffer((image_size, image_size)))
 
     def __del__(self):
-        self.sess.close()
 
         self.prog.release()
         self.vboPos.release()
@@ -98,7 +109,7 @@ class HandRenderer:
     def render_manifold(self, decoder, name="./manifold.png", bounds=(-4, 4), steps=0.5, verbose=False):
         """
         Render a 2D posed hand manifold
-        :param decoder: pytorch decoder function 2 -> 45 params
+        :param decoder: pytorch decoder function 2 -> 45 params, should be called with torch.no_grad():
         :param name: filename
         :param bounds: bounds of the sampling along the x and y axis
         :param steps: step size for sampling between the bounds
@@ -116,7 +127,7 @@ class HandRenderer:
 
         _, cols, rows = sampling_grid.shape
 
-        encoded = torch.tensor(encoded, dtype=torch.float)
+        encoded = torch.tensor(encoded, dtype=torch.float).cuda()
         batch_size = len(encoded)
 
         rot = np.zeros([batch_size, 3])
@@ -126,7 +137,7 @@ class HandRenderer:
         decoded_poses = decoded_poses.cpu().detach().numpy() + mano_data['hands_mean']
 
         decoded_poses = np.concatenate((rot, decoded_poses), axis=1)
-        vertices = get_mano_vertices(shape, decoded_poses, sess=self.sess)
+        vertices = get_mano_vertices(shape, decoded_poses)
 
         res = Image.new("RGB", (int(result_length), int(result_length)))
         for x in range(cols):
@@ -155,14 +166,9 @@ class HandRenderer:
         :return image of the hand
         """
         vertices = mano_vertices * 10.
-
-        # todo batch normal calculation outside this function in pytorch with cuda
-
-        self.normals.fill(0)
-        self.calc_normals(vertices)
+        vertices[:, 0] -= 0.141
 
         self.vboPos.write(vertices.astype('f4').tobytes())
-        self.vboNormal.write(self.normals.astype('f4').tobytes())
 
         # Rendering
         self.fbo1.use()
@@ -177,22 +183,6 @@ class HandRenderer:
 
         # img.show()
         return img
-
-     def calc_normals(self, vertices):
-
-        index = get_mano_faces()
-        edge1 = vertices[index[:, 2]] - vertices[index[:, 1]]
-        edge2 = vertices[index[:, 0]] - vertices[index[:, 1]]
-
-        normal = np.cross(edge1, edge2)  # face normals
-
-        for i, face, in enumerate(index):  # todo speedup: gather -> sum
-            x, y, z = face
-            self.normals[x] += normal[i]
-            self.normals[y] += normal[i]
-            self.normals[z] += normal[i]
-
-        # self.normals /= np.linalg.norm(self.normals, 2, 0) # normalize in shader
 
 
 if __name__ == '__main__':
