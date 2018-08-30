@@ -12,12 +12,11 @@ from tensorboardX import SummaryWriter
 import torchvision
 
 from pose_autoencoders.pose_loader import get_poses
-from utils.render_manifold import HandRenderer
-
-# os.makedirs('./figures', exist_ok=True)
+from utils.log_utils import string2color, get_log_path
+from utils.render_manifold import HandRenderer, plot_latent
 
 # todo add logdir args
-log_dir = "/home/dawars/projects/logdir/vanilla_ae"
+log_dir = "/home/dawars/projects/logdir/"
 
 num_epochs = 5001
 batch_size = 64
@@ -26,33 +25,23 @@ torch.manual_seed(7)
 
 dataset = get_poses()
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-poses = torch.Tensor(dataset).float().cuda()
+poses = torch.Tensor(dataset).float().cuda()  # for latent space plotting
 
-
-def plot_latent(latent, bounds=(), color=(1, 0, 0)):
-    plt.plot(*(latent.transpose()), '.', color=color)
-    plt.xlim(*bounds)
-    plt.ylim(*bounds)
-    plt.axis('off')
-    # plt.savefig("var_figures/pose_vae_latent_{0:04d}.png".format(epoch))
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    plt.close()
-    return buf
+num_neurons = 20
+activation = nn.ReLU
 
 
 class autoencoder(nn.Module):
     def __init__(self):
         super(autoencoder, self).__init__()
         self.encoder = nn.Sequential(
-            nn.Linear(45, 20),
-            nn.ReLU(True),
-            nn.Linear(20, 2))
+            nn.Linear(45, num_neurons),
+            activation(True),
+            nn.Linear(num_neurons, 2))
         self.decoder = nn.Sequential(
-            nn.Linear(2, 20),
-            nn.ReLU(True),
-            nn.Linear(20, 3 * 15))
+            nn.Linear(2, num_neurons),
+            activation(True),
+            nn.Linear(num_neurons, 3 * 15))
 
     def forward(self, x):
         x = self.encoder(x)
@@ -61,15 +50,27 @@ class autoencoder(nn.Module):
 
 
 def train():
-    writer = SummaryWriter(log_dir=log_dir)
+    params = {
+        'learning_rate': learning_rate,
+        'batch': batch_size,
+        'act': activation,
+        'neurons': num_neurons,
+        'weight_decay': 1e-5
+    }
+
+    model_name = "vanilla_ae"
+    save_dir = get_log_path(model_name, params=params)
+    writer = SummaryWriter(log_dir=os.path.join(log_dir, save_dir))
+
+    color = string2color(save_dir)
+
     to_tensor = torchvision.transforms.ToTensor()  # convert PIL image to tensor for tensorboard
 
-    color = (1, 0, 1)  # todo randomize from hypterparams
-
+    ### TRAINING ###
     model = autoencoder().cuda()
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(
-        model.parameters(), lr=learning_rate, weight_decay=1e-5)
+        model.parameters(), lr=learning_rate, weight_decay=params['weight_decay'])
 
     renderer = HandRenderer(64)
 
@@ -104,7 +105,8 @@ def train():
             manifold = renderer.render_manifold(model.decoder, filename=None, bounds=bounds, color=color)
             writer.add_image("manifold", to_tensor(manifold), epoch)
 
-            torch.save(model.state_dict(), os.path.join(log_dir, "vanilla_autoencoder_{}.pth".format(epoch)))
+            torch.save(model.state_dict(),
+                       os.path.join(log_dir, save_dir, "{name}_{epoch}.pth".format(name=model_name, epoch=epoch)))
 
 
 if __name__ == '__main__':

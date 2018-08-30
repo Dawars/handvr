@@ -1,6 +1,8 @@
 """
 Functions for rendering a single MANO model to image and manifold
 """
+import io
+
 import moderngl
 
 from PIL import Image
@@ -202,6 +204,21 @@ class HandRenderer:
 
         # img.show()
         return img
+
+
+def plot_latent(latent, bounds=(-6, 6), color=(1, 0, 0)):
+    plt.plot(*(latent.transpose()), '.', color=color)
+    plt.xlim(*bounds)
+    plt.ylim(*bounds)
+    plt.axis('off')
+    # plt.savefig("var_figures/pose_vae_latent_{0:04d}.png".format(epoch))
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    plt.close()
+    return buf
+
+
 if __name__ == '__main__':
     renderer = HandRenderer(256)
 

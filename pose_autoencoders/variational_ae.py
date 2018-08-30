@@ -15,10 +15,11 @@ from utils.render_manifold import HandRenderer
 from tensorboardX import SummaryWriter
 import torchvision
 
-#os.makedirs('./var_figures', exist_ok=True)
+from utils.log_utils import string2color, get_log_path
+from utils.render_manifold import HandRenderer, plot_latent
 
 # todo add logdir args
-log_dir = "/home/dawars/projects/logdir/variational_ae"
+log_dir = "/home/dawars/projects/logdir/"
 
 num_epochs = 5001
 batch_size = 64
@@ -27,32 +28,21 @@ torch.manual_seed(7)
 
 dataset = get_poses()
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-poses = torch.Tensor(dataset).float().cuda()
+poses = torch.Tensor(dataset).float().cuda()  # for latent space plotting
 
-
-def plot_latent(latent, bounds=(), color=(1, 0, 0)):
-    plt.plot(*(latent.transpose()), '.', color=color)
-    plt.xlim(*bounds)
-    plt.ylim(*bounds)
-    plt.axis('off')
-    # plt.savefig("var_figures/pose_vae_latent_{0:04d}.png".format(epoch))
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    plt.close()
-    return buf
-
+num_neurons = 20
+activation = functional.relu
 
 
 class autoencoder(nn.Module):
     def __init__(self):
         super(autoencoder, self).__init__()
-        self.l_encode1 = nn.Linear(45, 20)
-        self.l_encode_std = nn.Linear(20, 2)
-        self.l_encode_mean = nn.Linear(20, 2)
+        self.l_encode1 = nn.Linear(45, num_neurons)
+        self.l_encode_std = nn.Linear(num_neurons, 2)
+        self.l_encode_mean = nn.Linear(num_neurons, 2)
 
-        self.l_decode1 = nn.Linear(2, 20)
-        self.l_decode2 = nn.Linear(20, 45)
+        self.l_decode1 = nn.Linear(2, num_neurons)
+        self.l_decode2 = nn.Linear(num_neurons, 45)
 
     def encoder(self, x):
         """
@@ -60,7 +50,7 @@ class autoencoder(nn.Module):
         :return: Encoded vector of means and, if training, standard deviations
         """
         x = self.l_encode1(x)
-        x = functional.relu(x)
+        x = activation(x)
         if self.training:
             return self.l_encode_mean(x), self.l_encode_std(x)
         else:
@@ -73,7 +63,7 @@ class autoencoder(nn.Module):
 
     def decoder(self, x):
         x = self.l_decode1(x)
-        x = functional.relu(x)
+        x = activation(x)
         return self.l_decode2(x)
 
     def forward(self, x):
@@ -93,13 +83,26 @@ def loss_fcn(real_img, gen_img, mean, std):
 
 
 def train():
-    writer = SummaryWriter(log_dir=log_dir)
+    params = {
+        'lr': learning_rate,
+        'batch': batch_size,
+        'act': activation,
+        'neurons': num_neurons,
+        'loss_weight': 5,
+        'weight_decay': 1e-5
+    }
+
+    model_name = "vae"
+    save_dir = get_log_path(model_name, params=params)
+    writer = SummaryWriter(log_dir=os.path.join(log_dir, save_dir))
+
+    color = string2color(save_dir)
+
     to_tensor = torchvision.transforms.ToTensor()  # convert PIL image to tensor for tensorboard
 
-    color = (0, 1, 0)  # todo randomize from hypterparams
-
+    ### TRAINING ###
     model = autoencoder().cuda()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=params['weight_decay'])
 
     renderer = HandRenderer(64)
 
@@ -112,7 +115,8 @@ def train():
             # ===================forward=====================
             output, mean, std = model(img)
             gen_loss, latent_loss = loss_fcn(img, output, mean, std)
-            loss = 5 * gen_loss + latent_loss
+
+            loss = params['loss_weight'] * gen_loss + latent_loss
             # ===================backward====================
             optimizer.zero_grad()
             loss.backward()
@@ -131,6 +135,7 @@ def train():
             latent, _ = model.encoder(poses)
 
             bounds = (-6, 6)
+
             latent_plot = plot_latent(latent.cpu().detach().numpy(), bounds=bounds, color=color)
             image = PIL.Image.open(latent_plot)
             writer.add_image("latent_space", to_tensor(image), epoch)
@@ -138,8 +143,8 @@ def train():
             manifold = renderer.render_manifold(model.decoder, filename=None, bounds=bounds, color=color)
             writer.add_image("manifold", to_tensor(manifold), epoch)
 
-            torch.save(model.state_dict(), "./variational_autoencoder_{}.pth".format(epoch))
-
+            torch.save(model.state_dict(),
+                       os.path.join(log_dir, save_dir, "{name}_{epoch}.pth".format(name=model_name, epoch=epoch)))
 
 if __name__ == '__main__':
     train()
