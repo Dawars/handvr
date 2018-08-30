@@ -215,6 +215,8 @@ if __name__ == '__main__':
 
     from block_timer.timer import Timer
 
+    from block_timer.timer import Timer
+
     poses = get_mano_vertices(np.zeros([1, 10]), pose)
 
     with Timer():
