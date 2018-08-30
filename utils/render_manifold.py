@@ -2,12 +2,9 @@
 Functions for rendering a single MANO model to image and manifold
 """
 import moderngl
-import os
 
 from PIL import Image
-import numpy as np
 from matplotlib import pyplot as plt
-import torch
 
 from utils.mano_utils import *
 
@@ -21,34 +18,36 @@ vertex_shader = '''
                }
                '''
 fragment_shader = '''
-                   #version 330 core
-                   in vec3 out_normal;
-                   out vec4 f_color;
-
-                   const vec3 light1 = vec3(1, 1, -1);
-                   const vec3 light2 = vec3(0, 0, 1);
-                   
-                   const vec3 color = vec3(1, 0, 0);
-                   const vec3 ambientLight = vec3(0.13, 0.13, 0.13);
-                  const float shininess = 16.0;
-                     void main() {
-                        vec3 viewDir = vec3(0,0,1);
-                       vec3 normal = normalize(out_normal);
-                       float lambert1 = max(0, dot(normal, -normalize(light1)));
-                       float lambert2 = max(0, dot(normal, -normalize(light2)));
-
+                #version 330 core
+                
+                uniform vec3 color;
+                
+                in vec3 out_normal;
+                out vec4 f_color;
+                
+                const vec3 light1 = vec3(1, 1, -1);
+                const vec3 light2 = vec3(0, 0, 1);
+                
+                const vec3 ambientLight = vec3(0.13, 0.13, 0.13);
+                const float shininess = 16.0;
+                void main() {
+                    vec3 viewDir = vec3(0,0,1);
+                    vec3 normal = normalize(out_normal);
+                    float lambert1 = max(0, dot(normal, -normalize(light1)));
+                    float lambert2 = max(0, dot(normal, -normalize(light2)));
+                
                     vec3 halfDir = normalize(light2 + viewDir);
-                        float specAngle = max(dot(halfDir, normal), 0.0);
-                        float specular = pow(specAngle, shininess);
-                        
-
-                        vec3 final_color = ambientLight + 
-                                             0.8 * lambert1 * color + 
-                                             1.0 * lambert2 * color;
-
-                       f_color = vec4(final_color, 1.0);
-                   }
-                   '''
+                    float specAngle = max(dot(halfDir, normal), 0.0);
+                    float specular = pow(specAngle, shininess);
+                    
+                
+                    vec3 final_color = ambientLight + 
+                                         0.8 * lambert1 * color + 
+                                         1.0 * lambert2 * color;
+                
+                    f_color = vec4(final_color, 1.0);
+                }
+                '''
 geometry_shader = '''
                 #version 330 core
                 
@@ -106,7 +105,6 @@ class HandRenderer:
         self.vao = self.ctx.vertex_array(self.prog, vao_content, self.ibo)
 
         # Framebuffers
-
         self.fbo1 = self.ctx.framebuffer([self.ctx.renderbuffer((image_size, image_size), samples=8)])
         self.fbo2 = self.ctx.framebuffer([self.ctx.renderbuffer((image_size, image_size))])
 
@@ -119,20 +117,18 @@ class HandRenderer:
         self.fbo1.release()
         self.fbo2.release()
 
-    def render_manifolds(self, decoder, name="./manifold.png", bounds=(-4, 4), steps=0.5, verbose=False):
-        pass
-
-    def render_manifold(self, decoder, name="./manifold.png", bounds=(-4, 4), num_samples=16, verbose=False):
+    def render_manifold(self, decoder, filename="./manifold.png", bounds=(-4, 4), num_samples=16, color=(1, 0, 0),
+                        verbose=False):
         """
         Render a 2D posed hand manifold
         :param decoder: pytorch decoder function 2 -> 45 params, should be called with torch.no_grad():
-        :param name: filename
+        :param filename: filename
         :param bounds: bounds of the sampling along the x and y axis
-        :param steps: step size for sampling between the bounds
+        :param num_samples: number of samples between the bounds in a row
+        :param color: color of rendered model
         :param verbose: print progress
         :returns rendered image
         """
-        os.makedirs(os.path.dirname(name), exist_ok=True)
 
         result_length = self.image_size * num_samples
 
@@ -166,8 +162,7 @@ class HandRenderer:
 
                 model_index = (rows - y - 1) * rows + x
 
-                img = self.render_mano(vertices[model_index])
-                # mano_to_OBJ(shape, decoded_poses, "./test.obj")
+                img = self.render_mano(vertices[model_index], color)
 
                 x_pos = x * self.image_size
                 y_pos = y * self.image_size
@@ -175,13 +170,17 @@ class HandRenderer:
                 res.paste(img, (int(x_pos), int(y_pos)))
         if verbose:
             print("Manifold rendered")
-        res.save(name)
+
+        if filename is not None:
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
+            res.save(filename)
         return res
 
-    def render_mano(self, mano_vertices):
+    def render_mano(self, mano_vertices, color):
         """
         Render Mano on a single image
         :param mano_vertices: vertices of model render
+        :param color:
         :return image of the hand
         """
         vertices = mano_vertices * 10.
@@ -189,21 +188,20 @@ class HandRenderer:
 
         self.vboPos.write(vertices.astype('f4').tobytes())
 
+        self.prog['color'].value = color
+
         # Rendering
         self.fbo1.use()
         self.ctx.clear(0.9, 0.9, 0.9)
         self.vao.render()
 
         # Downsampling and loading the image using Pillow
-
         self.ctx.copy_framebuffer(self.fbo2, self.fbo1)
         data = self.fbo2.read(components=3, alignment=1)
         img = Image.frombytes('RGB', self.fbo2.size, data)  # .transpose(Image.FLIP_TOP_BOTTOM)
 
         # img.show()
         return img
-
-
 if __name__ == '__main__':
     renderer = HandRenderer(256)
 
