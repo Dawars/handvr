@@ -69,17 +69,16 @@ geometry_shader = '''
                 }
                 '''
 
-num_vertices = 778
-
 
 class HandRenderer:
-    def __init__(self, image_size=128):
+    def __init__(self, image_size=128, num_vertices=778):
         """
         Class for rendering a hand from parameters or manifold
         :param image_size: size of a single hand image
         """
 
         self.image_size = image_size
+        self.num_vertices = num_vertices
 
         # graphics
         self.ctx = moderngl.create_standalone_context()
@@ -130,8 +129,6 @@ class HandRenderer:
         :returns rendered image
         """
 
-        result_length = self.image_size * num_samples
-
         steps = (bounds[1] - bounds[0]) / num_samples
 
         # coordinates to sample at
@@ -143,16 +140,24 @@ class HandRenderer:
         encoded = torch.tensor(encoded, dtype=torch.float).cuda()
         batch_size = len(encoded)
 
-        rot = np.zeros([batch_size, 3])
-        rot[:, 0] = np.pi / 4
-
-        shape = np.zeros([batch_size, 10])
-
         decoded_poses = decoder(encoded)
         decoded_poses = decoded_poses.cpu().detach().numpy() + mano_data['hands_mean']
 
-        decoded_poses = np.concatenate((rot, decoded_poses), axis=1)
-        vertices = get_mano_vertices(shape, decoded_poses)
+        rot = np.zeros([batch_size, 3])
+        rot[:, 0] = np.pi / 4
+
+        poses = np.concatenate((rot, decoded_poses), axis=1)
+        shapes = np.zeros([batch_size, 10])
+
+        vertices = get_mano_vertices(shapes, poses)
+
+        self.render_hands(vertices, dims=(cols, rows), color=color, verbose=verbose)
+
+    def render_hands(self, vertices, dims, filename="./manifold.png", color=(1, 0, 0), verbose=False):
+        batch_size = len(vertices)
+
+        cols, rows = dims
+        result_length = self.image_size * cols
 
         res = Image.new("RGB", (int(result_length), int(result_length)))
         for x in range(cols):
@@ -161,6 +166,9 @@ class HandRenderer:
                     print("Rendering at {x}, {y}".format(x=x, y=y))
 
                 model_index = (rows - y - 1) * rows + x
+
+                if model_index > batch_size:
+                    continue
 
                 img = self.render_mano(vertices[model_index], color)
 
@@ -176,7 +184,7 @@ class HandRenderer:
             res.save(filename)
         return res
 
-    def render_mano(self, mano_vertices, color):
+    def render_mano(self, mano_vertices, color=(1, 0, 0)):
         """
         Render Mano on a single image
         :param mano_vertices: vertices of model render
@@ -202,8 +210,10 @@ class HandRenderer:
 
         # img.show()
         return img
+
+
 if __name__ == '__main__':
-    renderer = HandRenderer(256)
+    renderer = HandRenderer(image_size=256)
 
     # rendering mano
     pose = np.zeros([1, 48])
@@ -212,8 +222,6 @@ if __name__ == '__main__':
     i = 3 + 3 * finger + joint
     # pose[0, i + 1] = np.pi / 2
     pose[0, 0] = np.pi / 2
-
-    from block_timer.timer import Timer
 
     from block_timer.timer import Timer
 
