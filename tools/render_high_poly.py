@@ -142,8 +142,16 @@ if __name__ == '__main__':
 
     res = Image.new("RGB", (int(result_length), int(result_length)))
 
-    path = '/home/dawars/Downloads/handsOnly_SCANS/'
-    for i, file in enumerate(sorted(os.listdir(path))[:rows * cols]):
+    path = '/home/dawars/Downloads/handsOnly_REGISTRATIONS_r_l_lm'
+    filenames = sorted(os.listdir(path))
+
+    filenames_filtered = []
+
+    for name in filenames:
+        if 'l.ply' not in name:
+            filenames_filtered.append(name)
+
+    for i, file in enumerate(filenames_filtered[-rows * cols: -1]):
         print(f"reading {file}")
         plydata = PlyData.read(os.path.join(path, file))
 
@@ -161,7 +169,8 @@ if __name__ == '__main__':
         img = render_model(verts, faces, image_size=width)
 
         draw = ImageDraw.Draw(img)
-        draw.text((0, 0), file, fill=(0, 0, 0), font=ImageFont.truetype("arial"))
+        text = file[:-13] if 'mirror' in file else file[:-4]
+        draw.text((0, 0), text, fill=(0, 0, 0), font=ImageFont.truetype("arial"))
 
         x_pos = x * width
         y_pos = y * width
@@ -169,4 +178,4 @@ if __name__ == '__main__':
         res.paste(img, (int(x_pos), int(y_pos)))
     print("Manifold rendered")
 
-    res.save("./mano_poses_high.png")
+    res.save("./mano_poses_registrations.png")

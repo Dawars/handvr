@@ -3,7 +3,7 @@ Functions for rendering a single MANO model to image and manifold
 """
 import moderngl
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from matplotlib import pyplot as plt
 
 from utils.mano_utils import *
@@ -165,12 +165,15 @@ class HandRenderer:
                 if verbose:
                     print("Rendering at {x}, {y}".format(x=x, y=y))
 
-                model_index = (rows - y - 1) * rows + x
+                model_index = y * rows + x
 
                 if model_index > batch_size:
                     continue
 
                 img = self.render_mano(vertices[model_index], color=color)
+                if verbose:
+                    draw = ImageDraw.Draw(img)
+                    draw.text((0, 0), f"{model_index}", fill=(0, 0, 0), font=ImageFont.truetype("arial"))
 
                 x_pos = x * self.image_size
                 y_pos = y * self.image_size
@@ -184,14 +187,14 @@ class HandRenderer:
             res.save(filename)
         return res
 
-    def render_mano(self, mano_vertices, color=(1, 0, 0)):
+    def render_mano(self, vertices, index=None, color=(1, 0, 0)):
         """
         Render Mano on a single image
-        :param mano_vertices: vertices of model render
+        :param vertices: vertices of model render
         :param color:
         :return image of the hand
         """
-        vertices = mano_vertices * 10.
+        vertices = vertices * 10.
         vertices[:] -= [0.15, 0.0, 0.0]
 
         self.vboPos.write(vertices.astype('f4').tobytes())
