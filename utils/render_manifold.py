@@ -151,7 +151,7 @@ class HandRenderer:
 
         vertices = get_mano_vertices(shapes, poses)
 
-        self.render_hands(vertices, dims=(cols, rows), color=color, verbose=verbose)
+        self.render_hands(vertices, dims=(cols, rows), filename=filename, color=color, verbose=verbose)
 
     def render_hands(self, vertices, dims, filename="./manifold.png", color=(1, 0, 0), verbose=False):
         batch_size = len(vertices)
@@ -170,7 +170,7 @@ class HandRenderer:
                 if model_index > batch_size:
                     continue
 
-                img = self.render_mano(vertices[model_index], color)
+                img = self.render_mano(vertices[model_index], color=color)
 
                 x_pos = x * self.image_size
                 y_pos = y * self.image_size
@@ -239,4 +239,4 @@ if __name__ == '__main__':
     ae.load_state_dict(torch.load('../pose_autoencoders/sim_autoencoder.pth'))
 
     with Timer():
-        renderer.render_manifold(ae.decoder, './manifold_test.png', verbose=False)
+        renderer.render_manifold(ae.decoder, filename='./manifold_test.png', verbose=False)
