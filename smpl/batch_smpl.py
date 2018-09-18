@@ -75,8 +75,7 @@ class SMPL(torch.nn.Module):
 
         self.cur_device = None
 
-
-    def __call__(self, beta, theta, get_skin=False):
+    def forward(self, beta, theta, get_skin=False):
         """
         Obtain SMPL with shape (beta) & pose (theta) inputs.
         Theta includes the global rotation.

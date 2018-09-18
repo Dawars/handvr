@@ -1,19 +1,21 @@
 import os
 
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 from torch import nn
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
 from pose_autoencoders.pose_loader import get_poses
+from utils.mano_utils import get_mano_vertices
 from utils.render_manifold import HandRenderer
 
 os.makedirs('./figures', exist_ok=True)
 
-num_epochs = 1500
+num_epochs = 1501
 batch_size = 64
-learning_rate = 1e-3
+learning_rate = 1e-5
 torch.manual_seed(7)
 
 dataset = get_poses()
@@ -48,6 +50,16 @@ class autoencoder(nn.Module):
         return x
 
 
+def vertex_mse_loss(y, y_hat):
+    shape = np.zeros([y.shape[0], 10])
+    rot = torch.tensor([[0, 0, 0]], dtype=torch.float)  # global rotation
+    cams = rot.view(1, 3).repeat(y.shape[0], 1).view(-1, 3).cuda()
+
+    verts_orig = get_mano_vertices(shape, torch.cat([cams, y], dim=1), device=torch.device('cuda'))
+    vertes_pred = get_mano_vertices(shape, torch.cat([cams, y_hat], dim=1), device=torch.device('cuda'))
+    return nn.MSELoss()(vertes_pred, verts_orig)
+
+
 def train():
     model = autoencoder().cuda()
     criterion = nn.MSELoss()
@@ -56,15 +68,15 @@ def train():
 
     renderer = HandRenderer()
 
+
     for epoch in range(num_epochs):
         for data in dataloader:
-            img = data.float()
-            # img = img.view(img.size(0), -1)
-            img = Variable(img).cuda()
+            y = torch.tensor(data, dtype=torch.float).cuda()
 
             # ===================forward=====================
-            output = model(img).cuda()
-            loss = criterion(output, img)
+            y_hat = model(y).cuda()
+
+            loss = vertex_mse_loss(y, y_hat)
             # ===================backward====================
             optimizer.zero_grad()
             loss.backward()

@@ -149,7 +149,7 @@ class HandRenderer:
         poses = np.concatenate((rot, decoded_poses), axis=1)
         shapes = np.zeros([batch_size, 10])
 
-        vertices = get_mano_vertices(shapes, poses)
+        vertices = get_mano_vertices(shapes, poses).cpu().numpy()
 
         self.render_hands(vertices, dims=(cols, rows), filename=filename, color=color, verbose=verbose)
 

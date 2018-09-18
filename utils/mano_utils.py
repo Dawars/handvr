@@ -17,17 +17,17 @@ def get_mano_vertices(shape, pose, device=torch.device('cpu')):
     """
     :param shape: mano shape params [batch_size, 10]
     :param pose: mano pose params including global rotation (joint axis-angle representation) [batch_size, 45+3]
-    :return:
+    :return: a tensor on device
     """
     # check if not tensor: wrap
     if not isinstance(shape, torch.Tensor):
-        shape = torch.tensor(shape, dtype=torch.float).cuda()
+        shape = torch.tensor(shape, dtype=torch.float)
 
     if not isinstance(pose, torch.Tensor):
-        pose = torch.tensor(pose, dtype=torch.float).cuda()
+        pose = torch.tensor(pose, dtype=torch.float)
 
-    verts, joints, Rs = mano(shape, pose, get_skin=True)
-    return verts.cpu().detach().numpy()
+    verts, joints, Rs = mano(shape.cuda(), pose.cuda(), get_skin=True)
+    return verts.to(device)
 
 
 def get_mano_faces():
@@ -78,7 +78,7 @@ if __name__ == '__main__':
 
     # morph and skin
     with Timer():
-        vertices = get_mano_vertices(np.zeros([batch_size, 10]), np.zeros([batch_size, 48]))
+        vertices = get_mano_vertices(np.zeros([batch_size, 10]), np.zeros([batch_size, 48])).numpy()
         print(vertices)
 
     # save obj
