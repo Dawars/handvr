@@ -14,17 +14,22 @@ import torch
 import torch.nn.functional as F
 
 
-def batch_rodrigues(theta):
-    """
-    Theta is N x 3
-    """
-    l1norm = torch.norm(theta + 1e-8, p=2, dim=1)
+def euler2quat(euler):
+    l1norm = torch.norm(euler + 1e-8, p=2, dim=1)
     angle = torch.unsqueeze(l1norm, -1)
-    normalized = torch.div(theta, angle)
+    normalized = torch.div(euler, angle)
     angle = angle * 0.5
     v_cos = torch.cos(angle)
     v_sin = torch.sin(angle)
     quat = torch.cat([v_cos, v_sin * normalized], dim=1)
+    return quat
+
+
+def batch_rodrigues(theta):
+    """
+    Theta is N x 3
+    """
+    quat = euler2quat(theta)
 
     return quat2mat(quat)
 
@@ -70,14 +75,13 @@ def batch_global_rigid_transformation(Rs, Js, parent, rotate_base=False):
        """
     N = Rs.shape[0]
     if rotate_base:
-        np_rot_x = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]], dtype = np.float)
+        np_rot_x = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]], dtype=np.float)
         np_rot_x = np.reshape(np.tile(np_rot_x, [N, 1]), [N, 3, 3])
         rot_x = torch.tensor(torch.from_numpy(np_rot_x).float()).cuda()
-        root_rotation = torch.matmul(Rs[:, 0, :, :],  rot_x)
+        root_rotation = torch.matmul(Rs[:, 0, :, :], rot_x)
     else:
         root_rotation = Rs[:, 0, :, :]
     Js = torch.unsqueeze(Js, -1)
-
 
     def make_A(R, t):
         R_homo = F.pad(R, [0, 0, 0, 1, 0, 0])
