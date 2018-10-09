@@ -9,7 +9,7 @@ Read more: https://medium.com/kitchen-budapest/personalized-hand-models-for-vr-b
 
 ## Table of Content
 - [Hand pose space](#hand-pose-space)
-- [Joint datset](#joint-dataset)
+- [Joint dataset](#joint-dataset)
 - [Tools](#tools)
     - [Manifold rendering](#manifold-rendering)
     - [Ply renderer](#ply-renderer)
