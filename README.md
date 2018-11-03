@@ -1,8 +1,14 @@
 ## HandVR
 
-<img src="img/hand_anim.gif?raw=true" alt="Hand shape principle components" width="200" />
+In current games, players see a general hand model, but in reality hand shape has a lot of variation ([try it out!](https://dawars.me/mano/)):
 
-HandVR aims to reduce discomfort in VR by showing personalized hand models based on the players' physical characteristics. 
+<img src="https://dawars.me/wp-content/uploads/2016/08/the_gallery_hands.jpg" alt="General hand model" height="200" /><img src="img/hand_anim.gif?raw=true" alt="Hand shape space" width="200" />
+
+Seeing someone else’s hands move instead of your own feels uncanny and causes discomfort. As a workaround, most games apply clever tricks, like covering the player’s hands or showing gloves instead.
+
+HandVR aims to solve this by showing personalized hand models based on the players' physical characteristics using Deep Learning.
+
+<img src="https://cdn-images-1.medium.com/max/1600/0*6qeMBlPQyN3fHrW4" alt="HandVR concept" />
 
 Read more: https://medium.com/kitchen-budapest/personalized-hand-models-for-vr-bdf6d6f8fad3
 
