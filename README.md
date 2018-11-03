@@ -28,7 +28,7 @@ Here is such a manifold along with the positions of the training samples in the 
 
 Implemented AutoEncoders include:
 * Fully Connected AE (vanilla)
-* Convolutional AE (exploits adjecent joint hierarchy)
+* Convolutional AE (exploits adjacent joint hierarchy)
 * Variational AE
 * VAE GAN
 
@@ -46,9 +46,9 @@ This dataset was created by running the [OpenPose](https://github.com/CMU-Percep
 ### Tools
 #### Manifold rendering
 
-During training the auto encoders it is crutial to see the progress of the model. Therefore I created a tool that can render it as fast as possible.
+During the training of the auto encoders it is crucial to see the progress of the model. Therefore I created a tool that can render it as fast as possible.
 
-* Using raw OpenGl (ModernGL)
+* Using OpenGl (ModernGL)
 * Face normals calculated in Compute Shader
 * Skinning is done in one batch
 
@@ -59,7 +59,7 @@ The manifolds are added to Tensorboard during training for visualization
 
 #### Ply renderer
 
-The MANO models are given in the PLY format, both the low poly regisrtations and the high poly scans.
+The MANO models are given in the PLY format, both the low poly registrations and the high poly scans.
 
 <img src="img/mano_high_poly.png?raw=true" alt="Hand scans" width="400" />
 
@@ -67,10 +67,10 @@ The MANO models are given in the PLY format, both the low poly regisrtations and
 
 #### Web demo
 
-Interactive web demo for visualizing the **shape** parameters
+[Interactive web demo](https://dawars.me/mano/) for visualizing the **shape** parameters
 
 <img src="https://dawars.me/mano/images/banner.png" alt="Mano viewer" />
 
 ### Licence
 
-The MANO model is licenced under: http://mano.is.tue.mpg.de/license
+The MANO model is licensed under: http://mano.is.tue.mpg.de/license
